@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FDS Inline Edit</title>
+
+  <script>(function(){
+    var S=['light','light-hc','dark','dark-hc'];
+    function apply(){try{
+      var r=document.documentElement;
+      var s=localStorage.getItem('vanilla-skin')||'light';
+      S.forEach(function(c){r.classList.remove(c);});
+      r.classList.add(S.indexOf(s)>-1?s:'light');
+      if(localStorage.getItem('vanilla-cms-style')==='1'){
+        r.style.setProperty('--rounded-sm','4px');
+        r.style.setProperty('--rounded-md','8px');
+        r.style.setProperty('--rounded-lg','16px');
+      }else{
+        r.style.removeProperty('--rounded-sm');
+        r.style.removeProperty('--rounded-md');
+        r.style.removeProperty('--rounded-lg');
+      }
+    }catch(e){}}
+    apply();
+    window.addEventListener('pageshow',apply);
+  })()</script>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="tokens-high-contrast.css">
+  <link rel="stylesheet" href="tokens-dark.css">
+  <link rel="stylesheet" href="components.css">
+  <script src="icons.js"></script>
+
+  <style>
+    .showcase { max-width: 1200px; margin: 0 auto; padding: var(--spacing-9) var(--spacing-7); }
+    .showcase h1 { font-size: var(--font-size-md); font-weight: var(--font-weight-bold); margin: 0 0 var(--spacing-3); }
+    .showcase p.lead { color: var(--color-secondary); font-size: var(--font-size-sm); margin: 0 0 var(--spacing-8); max-width: 760px; }
+    .showcase__row { margin-bottom: var(--spacing-9); }
+    .showcase__label { display: block; font-size: 10px; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-secondary); margin-bottom: var(--spacing-3); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FDS inline edit — working prototype (LPD-9102)
+     One live table, driven by real behavior (script at the bottom
+     of this file), not CSS modifier classes standing in for state:
+       • Click (or Enter/Space on) a Name cell → opens a real
+         <input>, focused and selected.
+       • Enter or the check button → save. Empty value → error,
+         stays open. Non-empty → success flash, then settles back
+         to idle showing the new value.
+       • Escape or the × button → cancel, reverts to the old value.
+       • ↑/↓ while a Name trigger has focus moves to the same
+         cell in the next/previous row (Tab still moves normally
+         between cells/controls).
+     New primitive: .editable-cell / .editable-cell--editing
+     (+ --error/--success) in ../components.css — everything else
+     is stock kit classes, including Save/Cancel (.btn--primary /
+     .btn--secondary .btn--sm .btn--icon — same size as every other
+     icon button on this page, square not pill), which float below
+     the input via .editable-cell__actions so they never stretch
+     the row.
+     Based on Figma node 2912:18461 ("Text Inputs") for LPD-9102.
+     ════════════════════════════════════════════════════════════════ -->
+
+<main class="showcase">
+  <h1>Products — inline edit (table view)</h1>
+  <p class="lead">
+    LPD-9102 — inline editing for the Frontend Data Set, table view only. Click any product name to edit it for real: try saving empty, saving a value, cancelling, and moving between cells with the arrow keys.
+  </p>
+
+  <div class="showcase__row">
+    <span class="showcase__label">Products</span>
+
+    <div class="management-toolbar">
+      <div class="management-toolbar__bar">
+        <label class="checkbox">
+          <input type="checkbox" class="checkbox__input">
+          <span class="checkbox__box">
+            <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+            <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+          </span>
+        </label>
+
+        <button class="btn btn--secondary btn--sm" type="button">
+          <svg class="lexicon-icon"><use href="#filter"></use></svg>
+          Filter
+          <svg class="lexicon-icon"><use href="#caret-bottom"></use></svg>
+        </button>
+
+        <div class="management-toolbar__search">
+          <div class="search">
+            <input class="input__field search__field" type="search" placeholder="Search">
+            <button class="search__submit" aria-label="Search" type="button">
+              <svg class="lexicon-icon"><use href="#search"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn btn--primary btn--sm" type="button">
+          New
+          <svg class="lexicon-icon"><use href="#caret-bottom"></use></svg>
+        </button>
+      </div>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select all">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </th>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Catalog</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Modified Date</th>
+          <th class="table__cell--gutter"></th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- Row 1 — idle -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">My AVS sens</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--success">Approved</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 22, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 2 — IDLE / HOVER demo (real :hover — try it) -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Brake Fluid</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--success">Approved</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 20, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 3 — idle -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Premium Brake Fluid</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--secondary">Draft</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Aug 15, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 4 — FOCUS (editor open, Save/Cancel float below) -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Wear Sensors</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--success">Approved</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 22, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 5 — idle -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Brake Pads</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--warning">Pending</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 18, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 6 — VALIDATION error -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Premium Brake Pads</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--success">Approved</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Jul 3, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 7 — idle -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Brake Rotors</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--danger">Expired</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 22, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 8 — SUCCESS (just saved) -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Calipers</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--success">Approved</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 5, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 9 — idle -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Hoses</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--secondary">Draft</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 22, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+        <!-- Row 10 — idle -->
+        <tr>
+          <td class="table__cell--gutter">
+            <label class="checkbox" aria-label="Select row">
+              <input type="checkbox" class="checkbox__input">
+              <span class="checkbox__box">
+                <svg class="checkbox__icon checkbox__icon--check"><use href="#check-small"></use></svg>
+                <svg class="checkbox__icon checkbox__icon--hr"><use href="#hr"></use></svg>
+              </span>
+            </label>
+          </td>
+          <td><span class="sticker sticker--icon sticker--sm"><svg class="lexicon-icon"><use href="#products"></use></svg></span></td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-editable-trigger">
+              <span class="editable-cell__text">Timing Belt</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-select-trigger">
+              <span class="editable-cell__text">Auto Parts</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>Simple</td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-status-trigger">
+              <span class="editable-cell__text"><span class="label label--sm label--success">Approved</span></span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>
+            </button>
+          </td>
+          <td>
+            <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
+              <span class="editable-cell__text">Sep 22, 2026</span>
+              <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
+            </button>
+          </td>
+          <td class="table__cell--gutter">
+            <button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Inline-edit engine — click/keyboard-driven, no state faked in markup -->
+<script>
+(function () {
+  'use strict';
+
+  // Only one cell edits at a time — opening a new one force-closes
+  // whichever is currently open (reverting it if it was never saved).
+  var activeSession = null;
+
+  // Unique id per editing session, so the input's aria-describedby
+  // always points at THIS cell's tooltip, not a stray leftover one.
+  var tooltipUid = 0;
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function makeTrigger(value) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'editable-cell js-cell-trigger js-editable-trigger';
+    btn.innerHTML =
+      '<span class="editable-cell__text">' + escapeHtml(value) + '</span>' +
+      '<svg class="lexicon-icon editable-cell__icon"><use href="#pencil"></use></svg>';
+    return btn;
+  }
+
+  function openEditor(trigger) {
+    if (activeSession) { activeSession.forceClose(); }
+
+    var td = trigger.closest('td');
+    var originalValue = trigger.querySelector('.editable-cell__text').textContent;
+    var tooltipId = 'editable-cell-tooltip-' + (++tooltipUid);
+
+    var wrap = document.createElement('div');
+    wrap.className = 'editable-cell editable-cell--editing';
+    wrap.innerHTML =
+      '<input type="text" class="editable-cell__input" value="' + escapeHtml(originalValue) + '" aria-describedby="' + tooltipId + '">' +
+      '<svg class="lexicon-icon editable-cell__status-icon editable-cell__status-icon--error" aria-hidden="true"><use href="#exclamation-full"></use></svg>' +
+      '<svg class="lexicon-icon editable-cell__status-icon editable-cell__status-icon--success" aria-hidden="true"><use href="#check-circle-full"></use></svg>' +
+      '<span class="tooltip editable-cell__tooltip" id="' + tooltipId + '" role="alert">This field is required</span>' +
+      '<span class="editable-cell__actions">' +
+        '<button type="button" class="btn btn--primary btn--sm btn--icon" aria-label="Save"><svg class="lexicon-icon"><use href="#check"></use></svg></button>' +
+        '<button type="button" class="btn btn--secondary btn--sm btn--icon" aria-label="Cancel"><svg class="lexicon-icon"><use href="#times"></use></svg></button>' +
+      '</span>';
+
+    trigger.remove();
+    td.appendChild(wrap);
+
+    var input = wrap.querySelector('.editable-cell__input');
+    var saveBtn = wrap.querySelector('[aria-label="Save"]');
+    var cancelBtn = wrap.querySelector('[aria-label="Cancel"]');
+
+    input.focus();
+    input.select();
+
+    // Both icons live in the DOM from the start, each hidden by CSS.
+    // Toggling the state is just a class on `wrap` — nothing is ever
+    // created, removed, or has its `<use>`/`hidden` mutated at runtime,
+    // which is what kept failing to (re)render in testing.
+    function setStatus(kind) {
+      wrap.classList.remove('editable-cell--error', 'editable-cell--success');
+      if (kind === 'error') wrap.classList.add('editable-cell--error');
+      else if (kind === 'success') wrap.classList.add('editable-cell--success');
+      // role="alert" on the tooltip gets it announced the moment it
+      // appears; aria-invalid covers a screen reader re-focusing the
+      // input later and asking "what's wrong with this field?".
+      input.setAttribute('aria-invalid', kind === 'error' ? 'true' : 'false');
+    }
+
+    function restoreIdle(value) {
+      var trigger2 = makeTrigger(value);
+      wrap.remove();
+      td.appendChild(trigger2);
+      bindTrigger(trigger2);
+      trigger2.focus();
+      if (activeSession === session) activeSession = null;
+    }
+
+    function cancel() {
+      restoreIdle(originalValue);
+    }
+
+    // While still editable, closing means reverting (nothing was
+    // saved). Once a save has gone through (input disabled, mid
+    // success-flash), let its own timeout finish instead of
+    // reverting a value that already committed.
+    var session = {
+      forceClose: function () { if (!input.disabled) cancel(); }
+    };
+    activeSession = session;
+
+    function save() {
+      var value = input.value.trim();
+      if (!value) {
+        setStatus('error');
+        input.focus();
+        return;
+      }
+      setStatus('success');
+      input.value = value;
+      input.disabled = true;
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      window.setTimeout(function () { restoreIdle(value); }, 700);
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('input', function () {
+      setStatus(null);
+    });
+    // Same as a real DXP field: tabbing/clicking away from a required,
+    // still-empty input flags it red right there — no separate submit
+    // needed to discover it's invalid.
+    input.addEventListener('blur', function () {
+      if (!input.value.trim()) setStatus('error');
+    });
+    saveBtn.addEventListener('click', save);
+    cancelBtn.addEventListener('click', cancel);
+  }
+
+  function bindTrigger(trigger) {
+    trigger.addEventListener('click', function () { openEditor(trigger); });
+  }
+
+  document.querySelectorAll('.js-editable-trigger').forEach(bindTrigger);
+
+  // ────────────────────────────────────────────────────────────
+  // Select fields — same trigger shape as the text field, but
+  // hover shows the caret (this is a picker, not free text) and
+  // opening it drops a real .dropdown listbox instead of an
+  // <input>. Picking an option commits immediately: a valid
+  // choice from a fixed list can't be "invalid", so there's no
+  // error state here. Generic factory so Catalog (plain text
+  // options) and Status (label-chip options) share one engine
+  // instead of duplicating it per field.
+  //   triggerClass — this field's own marker class, e.g.
+  //     'js-status-trigger', for scoping querySelectorAll/binding.
+  //   options — the list of values a cell can be set to.
+  //   renderOption(value) — HTML string for that value, used both
+  //     for the trigger's current value and each dropdown item.
+  // ────────────────────────────────────────────────────────────
+  function createSelectField(triggerClass, options, renderOption) {
+    // 'js-status-trigger' → 'status' — used to scope a per-field-type
+    // width override in CSS (see .editable-cell-select--status).
+    var fieldKey = triggerClass.replace(/^js-/, '').replace(/-trigger$/, '');
+
+    function makeTrigger(value) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'editable-cell js-cell-trigger ' + triggerClass;
+      btn.innerHTML =
+        '<span class="editable-cell__text">' + renderOption(value) + '</span>' +
+        '<svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>';
+      return btn;
+    }
+
+    function bindTrigger(trigger) {
+      trigger.addEventListener('click', function () { openSelect(trigger); });
+    }
+
+    function openSelect(trigger) {
+      if (activeSession) { activeSession.forceClose(); }
+
+      var td = trigger.closest('td');
+      var originalValue = trigger.querySelector('.editable-cell__text').textContent.trim();
+
+      var wrap = document.createElement('div');
+      wrap.className = 'editable-cell-select editable-cell-select--' + fieldKey;
+      wrap.innerHTML =
+        '<button type="button" class="editable-cell editable-cell--editing" aria-haspopup="listbox" aria-expanded="true">' +
+          '<span class="editable-cell__text">' + renderOption(originalValue) + '</span>' +
+          '<svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>' +
+        '</button>' +
+        '<ul class="dropdown editable-cell__select-menu" role="listbox"></ul>';
+
+      trigger.remove();
+      td.appendChild(wrap);
+
+      var menu = wrap.querySelector('.editable-cell__select-menu');
+      var firstItem = null;
+      var activeItem = null;
+
+      options.forEach(function (option) {
+        var li = document.createElement('li');
+        var item = document.createElement('button');
+        item.type = 'button';
+        item.setAttribute('role', 'option');
+        var isCurrent = option === originalValue;
+        item.className = 'dropdown__item' + (isCurrent ? ' is-active' : '');
+        item.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+        item.innerHTML = '<span class="dropdown__item-text">' + renderOption(option) + '</span>';
+        item.addEventListener('click', function () { commit(option); });
+        li.appendChild(item);
+        menu.appendChild(li);
+        if (!firstItem) firstItem = item;
+        if (isCurrent) activeItem = item;
+      });
+
+      function onDocMousedown(e) {
+        if (!wrap.contains(e.target)) cancel();
+      }
+      document.addEventListener('mousedown', onDocMousedown, true);
+
+      function restoreIdle(value) {
+        document.removeEventListener('mousedown', onDocMousedown, true);
+        var trigger2 = makeTrigger(value);
+        wrap.remove();
+        td.appendChild(trigger2);
+        bindTrigger(trigger2);
+        trigger2.focus();
+        if (activeSession === session) activeSession = null;
+      }
+
+      function cancel() { restoreIdle(originalValue); }
+      function commit(value) { restoreIdle(value); }
+
+      var session = { forceClose: cancel };
+      activeSession = session;
+
+      wrap.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      });
+
+      // ↑ / ↓ move the highlight through the list; Enter/Space on a
+      // focused option activates it via the button's native behavior.
+      menu.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        var items = Array.prototype.slice.call(menu.querySelectorAll('.dropdown__item'));
+        var index = items.indexOf(document.activeElement);
+        var next = index + (e.key === 'ArrowDown' ? 1 : -1);
+        if (next < 0) next = items.length - 1;
+        if (next >= items.length) next = 0;
+        items[next].focus();
+      });
+
+      (activeItem || firstItem).focus();
+    }
+
+    document.querySelectorAll('.' + triggerClass).forEach(bindTrigger);
+  }
+
+  createSelectField(
+    'js-select-trigger',
+    ['Auto Parts', 'Motorcycle Parts', 'Truck Parts', 'Accessories', 'Safety Equipment'],
+    function (value) { return escapeHtml(value); }
+  );
+
+  var STATUS_TONES = { Approved: 'success', Draft: 'secondary', Pending: 'warning', Expired: 'danger' };
+  createSelectField(
+    'js-status-trigger',
+    ['Approved', 'Draft', 'Pending', 'Expired'],
+    function (value) {
+      var tone = STATUS_TONES[value] || 'secondary';
+      return '<span class="label label--sm label--' + tone + '">' + escapeHtml(value) + '</span>';
+    }
+  );
+
+  // ────────────────────────────────────────────────────────────
+  // Date field (Modified Date) — opens the real Lexicon
+  // .date-picker-panel (same classes as showcases/datepicker.html:
+  // header/nav/actions, weekday row, 7-col day grid), driven by
+  // actual calendar math (Monday-first weeks, 6 rows so every
+  // month has the same panel height) instead of the showcase's
+  // static sample days. Picking a day commits immediately, same
+  // reasoning as the other selects. Arrow keys move the focused
+  // day (crossing into the next/previous month re-renders the
+  // grid); Enter/Space picks the focused day natively.
+  // ────────────────────────────────────────────────────────────
+  var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function formatDate(date) {
+    return MONTH_NAMES[date.getMonth()].slice(0, 3) + ' ' + date.getDate() + ', ' + date.getFullYear();
+  }
+
+  function parseDate(text) {
+    var m = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(text.trim());
+    if (!m) return new Date();
+    var monthIndex = 0;
+    for (var i = 0; i < MONTH_NAMES.length; i++) {
+      if (MONTH_NAMES[i].slice(0, 3) === m[1].slice(0, 3)) { monthIndex = i; break; }
+    }
+    return new Date(parseInt(m[3], 10), monthIndex, parseInt(m[2], 10));
+  }
+
+  function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  // 6 full Monday-first weeks (42 cells) around the given month,
+  // so every month's panel is the same height.
+  function buildMonthCells(year, month) {
+    var firstOfMonth = new Date(year, month, 1);
+    var leading = (firstOfMonth.getDay() + 6) % 7;
+    var start = new Date(year, month, 1 - leading);
+    var cells = [];
+    for (var i = 0; i < 42; i++) {
+      cells.push(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+    }
+    return cells;
+  }
+
+  function makeDateTrigger(value) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'editable-cell js-cell-trigger js-date-trigger';
+    btn.innerHTML =
+      '<span class="editable-cell__text">' + escapeHtml(value) + '</span>' +
+      '<svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>';
+    return btn;
+  }
+
+  function bindDateTrigger(trigger) {
+    trigger.addEventListener('click', function () { openDatePicker(trigger); });
+  }
+
+  function openDatePicker(trigger) {
+    if (activeSession) { activeSession.forceClose(); }
+
+    var td = trigger.closest('td');
+    var originalValue = trigger.querySelector('.editable-cell__text').textContent.trim();
+    var selectedDate = parseDate(originalValue);
+    var focusedDate = selectedDate;
+    var viewYear = selectedDate.getFullYear();
+    var viewMonth = selectedDate.getMonth();
+
+    var wrap = document.createElement('div');
+    wrap.className = 'editable-cell-select editable-cell-select--date';
+    wrap.innerHTML =
+      '<button type="button" class="editable-cell editable-cell--editing" aria-haspopup="dialog" aria-expanded="true">' +
+        '<span class="editable-cell__text">' + escapeHtml(originalValue) + '</span>' +
+        '<svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>' +
+      '</button>' +
+      '<div class="date-picker-panel">' +
+        '<div class="date-picker-panel__header">' +
+          '<div class="date-picker-panel__nav">' +
+            '<span class="js-date-month-label"><span class="js-date-month-text"></span> <svg class="lexicon-icon"><use href="#caret-double-l"></use></svg></span>' +
+            '<span class="js-date-year-label"><span class="js-date-year-text"></span> <svg class="lexicon-icon"><use href="#caret-double-l"></use></svg></span>' +
+          '</div>' +
+          '<div class="date-picker-panel__actions">' +
+            '<button type="button" class="btn btn--borderless btn--sm btn--icon js-date-prev" aria-label="Previous month"><svg class="lexicon-icon"><use href="#angle-left"></use></svg></button>' +
+            '<button type="button" class="btn btn--borderless btn--sm btn--icon js-date-today" aria-label="Jump to current month"><svg class="lexicon-icon"><use href="#circle"></use></svg></button>' +
+            '<button type="button" class="btn btn--borderless btn--sm btn--icon js-date-next" aria-label="Next month"><svg class="lexicon-icon"><use href="#angle-right"></use></svg></button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="date-picker-panel__weekdays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>' +
+        '<div class="date-picker-panel__grid js-date-grid" role="grid"></div>' +
+      '</div>';
+
+    trigger.remove();
+    td.appendChild(wrap);
+
+    // DXP convention (not the same as Catalog/Status): picking a day
+    // just previews it — updates the value shown in the open trigger
+    // and moves the highlight, panel stays open so you can keep
+    // browsing. It only actually commits when you click away.
+    var openValueText = wrap.querySelector('.editable-cell--editing .editable-cell__text');
+    var monthText = wrap.querySelector('.js-date-month-text');
+    var yearText = wrap.querySelector('.js-date-year-text');
+    var grid = wrap.querySelector('.js-date-grid');
+    var prevBtn = wrap.querySelector('.js-date-prev');
+    var nextBtn = wrap.querySelector('.js-date-next');
+    var todayBtn = wrap.querySelector('.js-date-today');
+
+    function renderGrid(focusAfterRender) {
+      monthText.textContent = MONTH_NAMES[viewMonth];
+      yearText.textContent = String(viewYear);
+      grid.innerHTML = '';
+
+      var cells = buildMonthCells(viewYear, viewMonth);
+      var toFocus = null;
+
+      cells.forEach(function (cellDate) {
+        var day = document.createElement('button');
+        day.type = 'button';
+        day.setAttribute('role', 'gridcell');
+        var classes = ['date-picker-panel__day'];
+        if (cellDate.getMonth() !== viewMonth) classes.push('date-picker-panel__day--muted');
+        if (isSameDay(cellDate, selectedDate)) classes.push('is-selected');
+        day.className = classes.join(' ');
+        day.textContent = String(cellDate.getDate());
+        day.tabIndex = isSameDay(cellDate, focusedDate) ? 0 : -1;
+        day.addEventListener('click', function () { selectDay(cellDate); });
+        grid.appendChild(day);
+        if (isSameDay(cellDate, focusedDate)) toFocus = day;
+      });
+
+      if (focusAfterRender && toFocus) toFocus.focus();
+    }
+
+    function goToMonth(year, month, keepFocusDay) {
+      viewYear = year;
+      viewMonth = month;
+      if (keepFocusDay) {
+        var lastDay = new Date(year, month + 1, 0).getDate();
+        focusedDate = new Date(year, month, Math.min(focusedDate.getDate(), lastDay));
+      }
+      renderGrid(true);
+    }
+
+    function shiftFocusedDate(days) {
+      var next = new Date(focusedDate.getFullYear(), focusedDate.getMonth(), focusedDate.getDate() + days);
+      focusedDate = next;
+      if (next.getMonth() !== viewMonth || next.getFullYear() !== viewYear) {
+        viewYear = next.getFullYear();
+        viewMonth = next.getMonth();
+      }
+      renderGrid(true);
+    }
+
+    // Preview only — updates the visible value and the highlighted
+    // day, but leaves the panel open. See restoreIdle()/confirmAndClose()
+    // for what actually closes it.
+    function selectDay(date) {
+      selectedDate = date;
+      focusedDate = date;
+      openValueText.textContent = formatDate(date);
+      renderGrid(true);
+    }
+
+    prevBtn.addEventListener('click', function () {
+      var d = new Date(viewYear, viewMonth - 1, 1);
+      goToMonth(d.getFullYear(), d.getMonth(), true);
+    });
+    nextBtn.addEventListener('click', function () {
+      var d = new Date(viewYear, viewMonth + 1, 1);
+      goToMonth(d.getFullYear(), d.getMonth(), true);
+    });
+    todayBtn.addEventListener('click', function () {
+      var today = new Date();
+      focusedDate = today;
+      goToMonth(today.getFullYear(), today.getMonth(), true);
+    });
+
+    grid.addEventListener('keydown', function (e) {
+      var deltas = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+      if (deltas[e.key] === undefined) return;
+      e.preventDefault();
+      shiftFocusedDate(deltas[e.key]);
+    });
+
+    function onDocMousedown(e) {
+      if (!wrap.contains(e.target)) confirmAndClose();
+    }
+    document.addEventListener('mousedown', onDocMousedown, true);
+
+    function restoreIdle(value) {
+      document.removeEventListener('mousedown', onDocMousedown, true);
+      var trigger2 = makeDateTrigger(value);
+      wrap.remove();
+      td.appendChild(trigger2);
+      bindDateTrigger(trigger2);
+      trigger2.focus();
+      if (activeSession === session) activeSession = null;
+    }
+
+    // Escape = discard whatever was previewed, back to the original
+    // value. Clicking away (or opening a different cell) = accept
+    // whatever's currently previewed — same as a real DXP date field.
+    function cancel() { restoreIdle(originalValue); }
+    function confirmAndClose() { restoreIdle(formatDate(selectedDate)); }
+
+    var session = { forceClose: confirmAndClose };
+    activeSession = session;
+
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+
+    renderGrid(true);
+  }
+
+  document.querySelectorAll('.js-date-trigger').forEach(bindDateTrigger);
+
+  // ↑ / ↓ moves focus to the same column in the next/previous row,
+  // only while an idle trigger (any field type, not an open editor)
+  // has focus.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    var active = document.activeElement;
+    if (!active || !active.classList || !active.classList.contains('js-cell-trigger')) return;
+
+    var td = active.closest('td');
+    var tr = td.closest('tr');
+    var cellIndex = Array.prototype.indexOf.call(tr.children, td);
+    var targetRow = e.key === 'ArrowDown' ? tr.nextElementSibling : tr.previousElementSibling;
+    if (!targetRow) return;
+
+    var targetCell = targetRow.children[cellIndex];
+    var targetTrigger = targetCell && targetCell.querySelector('.js-cell-trigger');
+    if (targetTrigger) { e.preventDefault(); targetTrigger.focus(); }
+  });
+})();
+</script>
+
+</body>
+</html>
