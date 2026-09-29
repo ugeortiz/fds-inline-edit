@@ -4692,6 +4692,11 @@
   opacity: 1;
 }
 
+/* Expire Date is the one exception: its icon carries the
+   valid/invalid signal (exclamation vs. check), not just a
+   hover-only "click to edit" affordance, so it's always visible. */
+.js-date-trigger .editable-cell__icon { opacity: 1; }
+
 /* Editing — input replaces the trigger button, same footprint.
    Width is set ONCE from the `size` attribute when the editor
    opens (roughly matching the original value) and never resized
@@ -4762,9 +4767,15 @@
   z-index: 2;
 }
 
-.editable-cell--editing.editable-cell--error { background: var(--color-danger-l2); border-color: var(--color-danger-l1); }
+/* Not scoped to --editing on purpose: Name only ever carries these
+   mid-edit, but the Expire Date field also tints its IDLE trigger
+   permanently (past = invalid, future = valid) — same classes,
+   two different lifetimes. */
+.editable-cell--error { background: var(--color-danger-l2); border-color: var(--color-danger-l1); }
+.editable-cell--error .editable-cell__icon { color: var(--color-danger); }
 
-.editable-cell--editing.editable-cell--success { background: var(--color-success-l2); border-color: var(--color-success-l1); }
+.editable-cell--success { background: var(--color-success-l2); border-color: var(--color-success-l1); }
+.editable-cell--success .editable-cell__icon { color: var(--color-success); }
 .editable-cell--editing.editable-cell--success .editable-cell__input { color: var(--color-success-d2); }
 
 /* A select field reuses .editable-cell--editing for its open-state

@@ -122,7 +122,7 @@
           <th>Catalog</th>
           <th>Type</th>
           <th>Status</th>
-          <th>Modified Date</th>
+          <th>Expire Date</th>
           <th class="table__cell--gutter"></th>
         </tr>
       </thead>
@@ -161,7 +161,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 22, 2026</span>
+              <span class="editable-cell__text">Oct 15, 2027</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -203,7 +203,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 20, 2026</span>
+              <span class="editable-cell__text">Mar 20, 2025</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -245,7 +245,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Aug 15, 2026</span>
+              <span class="editable-cell__text">Dec 1, 2027</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -287,7 +287,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 22, 2026</span>
+              <span class="editable-cell__text">Feb 22, 2025</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -329,7 +329,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 18, 2026</span>
+              <span class="editable-cell__text">Nov 3, 2027</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -371,7 +371,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Jul 3, 2026</span>
+              <span class="editable-cell__text">Jul 3, 2025</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -413,7 +413,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 22, 2026</span>
+              <span class="editable-cell__text">Oct 1, 2027</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -455,7 +455,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 5, 2026</span>
+              <span class="editable-cell__text">Sep 5, 2025</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -497,7 +497,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 22, 2026</span>
+              <span class="editable-cell__text">Jan 15, 2028</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -539,7 +539,7 @@
           </td>
           <td>
             <button type="button" class="editable-cell js-cell-trigger js-date-trigger">
-              <span class="editable-cell__text">Sep 22, 2026</span>
+              <span class="editable-cell__text">Sep 22, 2025</span>
               <svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>
             </button>
           </td>
@@ -732,12 +732,16 @@
         '<button type="button" class="editable-cell editable-cell--editing" aria-haspopup="listbox" aria-expanded="true">' +
           '<span class="editable-cell__text">' + renderOption(originalValue) + '</span>' +
           '<svg class="lexicon-icon editable-cell__icon"><use href="#caret-bottom-l"></use></svg>' +
+          '<svg class="lexicon-icon editable-cell__status-icon editable-cell__status-icon--success" aria-hidden="true"><use href="#check-circle-full"></use></svg>' +
         '</button>' +
         '<ul class="dropdown editable-cell__select-menu" role="listbox"></ul>';
 
       trigger.remove();
       td.appendChild(wrap);
 
+      var openBtn = wrap.querySelector('.editable-cell--editing');
+      var openText = openBtn.querySelector('.editable-cell__text');
+      var openIcon = openBtn.querySelector('.editable-cell__icon');
       var menu = wrap.querySelector('.editable-cell__select-menu');
       var firstItem = null;
       var activeItem = null;
@@ -774,9 +778,22 @@
       }
 
       function cancel() { restoreIdle(originalValue); }
-      function commit(value) { restoreIdle(value); }
 
-      var session = { forceClose: cancel };
+      // Picking an option can't be "invalid", but it still needs a
+      // visible "yes, that saved" moment — same green flash Name
+      // gets after a successful save, then settle back to idle.
+      var isConfirming = false;
+      function commit(value) {
+        isConfirming = true;
+        document.removeEventListener('mousedown', onDocMousedown, true);
+        menu.remove();
+        openText.innerHTML = renderOption(value);
+        openBtn.classList.add('editable-cell--success');
+        openIcon.remove(); // swap for the status icon, not stack both
+        window.setTimeout(function () { restoreIdle(value); }, 700);
+      }
+
+      var session = { forceClose: function () { if (!isConfirming) cancel(); } };
       activeSession = session;
 
       wrap.addEventListener('keydown', function (e) {
@@ -819,15 +836,18 @@
   );
 
   // ────────────────────────────────────────────────────────────
-  // Date field (Modified Date) — opens the real Lexicon
+  // Date field (Expire Date) — opens the real Lexicon
   // .date-picker-panel (same classes as showcases/datepicker.html:
   // header/nav/actions, weekday row, 7-col day grid), driven by
   // actual calendar math (Monday-first weeks, 6 rows so every
   // month has the same panel height) instead of the showcase's
-  // static sample days. Picking a day commits immediately, same
-  // reasoning as the other selects. Arrow keys move the focused
-  // day (crossing into the next/previous month re-renders the
-  // grid); Enter/Space picks the focused day natively.
+  // static sample days. Picking a day previews it (DXP convention:
+  // stays open, commits on click-away — see confirmAndClose below).
+  // Arrow keys move the focused day (crossing into the next/previous
+  // month re-renders the grid); Enter/Space picks the focused day
+  // natively. Real validation: past = invalid (red), today or later
+  // = valid (green) — applied to the idle chip, live while browsing
+  // the open picker, and on the confirmed result (applyDateValidity).
   // ────────────────────────────────────────────────────────────
   var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -849,6 +869,15 @@
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
 
+  // Expire Date's actual validation rule: past = invalid, today or
+  // later = valid. Uses the real current date, not a fixed one, so
+  // this keeps being correct no matter when the page is opened.
+  function isDateValid(date) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date.getTime() >= today.getTime();
+  }
+
   // 6 full Monday-first weeks (42 cells) around the given month,
   // so every month's panel is the same height.
   function buildMonthCells(year, month) {
@@ -862,6 +891,22 @@
     return cells;
   }
 
+  // Swaps in the exclamation/check-circle icon and error/success tint
+  // for a trigger's current value. Rebuilds the icon element outright
+  // (instead of changing an existing <use> href) — a persistent
+  // WebKit bug means a <use> that already resolved once won't
+  // re-resolve after its href changes.
+  function applyDateValidity(trigger, date) {
+    var valid = isDateValid(date);
+    trigger.classList.toggle('editable-cell--error', !valid);
+    trigger.classList.toggle('editable-cell--success', valid);
+    var icon = trigger.querySelector('.editable-cell__icon');
+    if (icon) {
+      icon.outerHTML = '<svg class="lexicon-icon editable-cell__icon"><use href="#' +
+        (valid ? 'check-circle-full' : 'exclamation-full') + '"></use></svg>';
+    }
+  }
+
   function makeDateTrigger(value) {
     var btn = document.createElement('button');
     btn.type = 'button';
@@ -869,6 +914,7 @@
     btn.innerHTML =
       '<span class="editable-cell__text">' + escapeHtml(value) + '</span>' +
       '<svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>';
+    applyDateValidity(btn, parseDate(value));
     return btn;
   }
 
@@ -916,7 +962,8 @@
     // just previews it — updates the value shown in the open trigger
     // and moves the highlight, panel stays open so you can keep
     // browsing. It only actually commits when you click away.
-    var openValueText = wrap.querySelector('.editable-cell--editing .editable-cell__text');
+    var openBtn = wrap.querySelector('.editable-cell--editing');
+    var openValueText = openBtn.querySelector('.editable-cell__text');
     var monthText = wrap.querySelector('.js-date-month-text');
     var yearText = wrap.querySelector('.js-date-year-text');
     var grid = wrap.querySelector('.js-date-grid');
@@ -970,6 +1017,15 @@
       renderGrid(true);
     }
 
+    // Past = invalid (red), today-or-future = valid (green) — tints
+    // the open pill live as you browse, same rule as the idle chip.
+    function updateOpenValidity(date) {
+      var valid = isDateValid(date);
+      openBtn.classList.toggle('editable-cell--error', !valid);
+      openBtn.classList.toggle('editable-cell--success', valid);
+    }
+    updateOpenValidity(selectedDate);
+
     // Preview only — updates the visible value and the highlighted
     // day, but leaves the panel open. See restoreIdle()/confirmAndClose()
     // for what actually closes it.
@@ -977,6 +1033,7 @@
       selectedDate = date;
       focusedDate = date;
       openValueText.textContent = formatDate(date);
+      updateOpenValidity(date);
       renderGrid(true);
     }
 
@@ -1032,7 +1089,10 @@
     renderGrid(true);
   }
 
-  document.querySelectorAll('.js-date-trigger').forEach(bindDateTrigger);
+  document.querySelectorAll('.js-date-trigger').forEach(function (trigger) {
+    applyDateValidity(trigger, parseDate(trigger.querySelector('.editable-cell__text').textContent.trim()));
+    bindDateTrigger(trigger);
+  });
 
   // ↑ / ↓ moves focus to the same column in the next/previous row,
   // only while an idle trigger (any field type, not an open editor)
