@@ -4692,10 +4692,6 @@
   opacity: 1;
 }
 
-/* Expire Date is the one exception: its icon carries the
-   valid/invalid signal (exclamation vs. check), not just a
-   hover-only "click to edit" affordance, so it's always visible. */
-.js-date-trigger .editable-cell__icon { opacity: 1; }
 
 /* Editing — input replaces the trigger button, same footprint.
    Width is set ONCE from the `size` attribute when the editor

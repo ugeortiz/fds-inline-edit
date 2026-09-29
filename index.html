@@ -891,22 +891,10 @@
     return cells;
   }
 
-  // Swaps in the exclamation/check-circle icon and error/success tint
-  // for a trigger's current value. Rebuilds the icon element outright
-  // (instead of changing an existing <use> href) — a persistent
-  // WebKit bug means a <use> that already resolved once won't
-  // re-resolve after its href changes.
-  function applyDateValidity(trigger, date) {
-    var valid = isDateValid(date);
-    trigger.classList.toggle('editable-cell--error', !valid);
-    trigger.classList.toggle('editable-cell--success', valid);
-    var icon = trigger.querySelector('.editable-cell__icon');
-    if (icon) {
-      icon.outerHTML = '<svg class="lexicon-icon editable-cell__icon"><use href="#' +
-        (valid ? 'check-circle-full' : 'exclamation-full') + '"></use></svg>';
-    }
-  }
-
+  // Idle is always plain — red/green is a momentary confirmation of
+  // the act of changing the value (see confirmAndClose), not a
+  // standing property of the row. Same rule Name follows: no lasting
+  // color, just a flash around the moment of change.
   function makeDateTrigger(value) {
     var btn = document.createElement('button');
     btn.type = 'button';
@@ -914,7 +902,6 @@
     btn.innerHTML =
       '<span class="editable-cell__text">' + escapeHtml(value) + '</span>' +
       '<svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>';
-    applyDateValidity(btn, parseDate(value));
     return btn;
   }
 
@@ -1017,23 +1004,14 @@
       renderGrid(true);
     }
 
-    // Past = invalid (red), today-or-future = valid (green) — tints
-    // the open pill live as you browse, same rule as the idle chip.
-    function updateOpenValidity(date) {
-      var valid = isDateValid(date);
-      openBtn.classList.toggle('editable-cell--error', !valid);
-      openBtn.classList.toggle('editable-cell--success', valid);
-    }
-    updateOpenValidity(selectedDate);
-
     // Preview only — updates the visible value and the highlighted
-    // day, but leaves the panel open. See restoreIdle()/confirmAndClose()
-    // for what actually closes it.
+    // day, but leaves the panel open and neutral (--editing's default
+    // primary tint). No red/green while just browsing, same as Name
+    // not validating on every keystroke — only confirmAndClose checks.
     function selectDay(date) {
       selectedDate = date;
       focusedDate = date;
       openValueText.textContent = formatDate(date);
-      updateOpenValidity(date);
       renderGrid(true);
     }
 
@@ -1063,6 +1041,8 @@
     }
     document.addEventListener('mousedown', onDocMousedown, true);
 
+    var panel = wrap.querySelector('.date-picker-panel');
+
     function restoreIdle(value) {
       document.removeEventListener('mousedown', onDocMousedown, true);
       var trigger2 = makeDateTrigger(value);
@@ -1073,26 +1053,50 @@
       if (activeSession === session) activeSession = null;
     }
 
-    // Escape = discard whatever was previewed, back to the original
-    // value. Clicking away (or opening a different cell) = accept
-    // whatever's currently previewed — same as a real DXP date field.
+    // Escape = bail out right now, no flash, back to the original value.
     function cancel() { restoreIdle(originalValue); }
-    function confirmAndClose() { restoreIdle(formatDate(selectedDate)); }
+
+    // Clicking away is a real validation checkpoint, not just a close:
+    // a valid (today-or-later) pick flashes green and commits; an
+    // invalid (past) pick is REJECTED — it flashes red and the field
+    // keeps the value it already had, same "don't save what's wrong"
+    // rule as the Name field, just resolved automatically instead of
+    // leaving the editor open for a retry.
+    var isConfirming = false;
+    function confirmAndClose() {
+      if (isConfirming) return;
+      isConfirming = true;
+      document.removeEventListener('mousedown', onDocMousedown, true);
+      panel.remove();
+
+      var valid = isDateValid(selectedDate);
+      var finalValue = valid ? formatDate(selectedDate) : originalValue;
+
+      openValueText.textContent = finalValue;
+      openBtn.classList.remove('editable-cell--error', 'editable-cell--success');
+      openBtn.classList.add(valid ? 'editable-cell--success' : 'editable-cell--error');
+      var icon = openBtn.querySelector('.editable-cell__icon');
+      if (icon) {
+        icon.outerHTML = '<svg class="lexicon-icon editable-cell__icon"><use href="#' +
+          (valid ? 'check-circle-full' : 'exclamation-full') + '"></use></svg>';
+      }
+
+      window.setTimeout(function () { restoreIdle(finalValue); }, 700);
+    }
 
     var session = { forceClose: confirmAndClose };
     activeSession = session;
 
     wrap.addEventListener('keydown', function (e) {
+      if (isConfirming) return;
       if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      else if (e.key === 'Enter') { e.preventDefault(); confirmAndClose(); }
     });
 
     renderGrid(true);
   }
 
-  document.querySelectorAll('.js-date-trigger').forEach(function (trigger) {
-    applyDateValidity(trigger, parseDate(trigger.querySelector('.editable-cell__text').textContent.trim()));
-    bindDateTrigger(trigger);
-  });
+  document.querySelectorAll('.js-date-trigger').forEach(bindDateTrigger);
 
   // ↑ / ↓ moves focus to the same column in the next/previous row,
   // only while an idle trigger (any field type, not an open editor)
