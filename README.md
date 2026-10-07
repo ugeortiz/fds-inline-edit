@@ -6,7 +6,7 @@ No build step, no server. Open `index.html` directly in a browser.
 
 ## What's here
 
-One live "Products" table with every FDS field renderer, all of them actually interactive:
+One live "Products" table with the FDS field renderers, all of them actually interactive:
 
 | Column | Renderer | How it edits |
 | --- | --- | --- |
@@ -19,7 +19,6 @@ One live "Products" table with every FDS field renderer, all of them actually in
 | Quantity | Quantity selector | Inline input with − / + steppers, whole number 0–999 |
 | Published | Boolean | Toggle |
 | Expire Date | Date | Calendar, or type the date; can't be in the past |
-| Updated | Date and Time | Calendar plus a time field, or type both; can't be in the future |
 | Details | Action link | Not editable inline, shows what it does |
 
 Some cells are locked to show the read-only state: a lock appears on hover and clicking explains why.
@@ -28,7 +27,7 @@ Some cells are locked to show the read-only state: a lock appears on hover and c
 
 Every field follows the same rules, so behavior is predictable:
 
-- **Edit, then confirm.** Free-form fields (text, link, quantity, date, date and time, image) work on a draft. ✓ or Enter saves it, ✕ or Escape cancels and restores the previous value.
+- **Edit, then confirm.** Free-form fields (text, link, quantity, date, image) work on a draft. ✓ or Enter saves it, ✕ or Escape cancels and restores the previous value.
 - **Invalid never saves.** A failed check keeps the editor open, turns the cell red and shows the reason in a tooltip (also announced to screen readers). Nothing is written until the draft is valid.
 - **Success is a short flash.** A saved value flashes green with a check, then the cell goes back to idle. Idle cells are never tinted.
 - **Picking is committing.** Option lists and the toggle can't hold an invalid draft, so choosing a value saves it straight away with the same green flash.

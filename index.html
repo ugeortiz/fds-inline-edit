@@ -38,7 +38,7 @@
     .showcase__row { margin-bottom: var(--spacing-9); }
     .showcase__label { display: block; font-size: 10px; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-secondary); margin-bottom: var(--spacing-3); }
     .showcase__scroll { overflow-x: auto; }
-    .showcase__scroll .table { min-width: 1560px; }
+    .showcase__scroll .table { min-width: 1360px; }
   </style>
 </head>
 <body>
@@ -151,21 +151,20 @@
     { key: 'qty', label: 'Quantity', type: 'quantity' },
     { key: 'published', label: 'Published', type: 'boolean' },
     { key: 'expire', label: 'Expire Date', type: 'date' },
-    { key: 'updated', label: 'Updated', type: 'datetime' },
     { key: 'details', label: 'Details', type: 'action' }
   ];
 
   var PRODUCTS = [
-    { name: 'My AVS sens', catalog: 'Auto Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/avs-sens', qty: 120, published: true, expire: daysFromNow(400), updated: daysFromNow(-1, 14, 30), image: { src: thumb('A', '#e7f0ff', '#2e5aac'), name: 'avs-sens.png' } },
-    { name: 'Brake Fluid', catalog: 'Auto Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/brake-fluid', qty: 48, published: true, expire: daysFromNow(-200), updated: daysFromNow(-3, 9, 15), image: { src: thumb('B', '#fff4e5', '#b95000'), name: 'brake-fluid.png' }, locked: { status: 'Only a Catalog Manager can change the status.' } },
-    { name: 'Premium Brake Fluid', catalog: 'Auto Parts', kind: 'Grouped', status: 'Draft', url: 'https://liferay.com/products/premium-brake-fluid', qty: 12, published: false, expire: daysFromNow(420), updated: daysFromNow(-7, 17, 45), image: { src: thumb('P', '#fff4e5', '#b95000'), name: 'premium-brake-fluid.png' } },
-    { name: 'Wear Sensors', catalog: 'Truck Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/wear-sensors', qty: 300, published: true, expire: daysFromNow(-150), updated: daysFromNow(-10, 11, 0), image: { src: thumb('W', '#e9f7ee', '#287d3c'), name: 'wear-sensors.png' } },
-    { name: 'Brake Pads', catalog: 'Auto Parts', kind: 'Simple', status: 'Pending', url: 'https://liferay.com/products/brake-pads', qty: 75, published: false, expire: daysFromNow(300), updated: daysFromNow(-14, 8, 20), image: { src: thumb('B', '#f4e8ff', '#7a3aa8'), name: 'brake-pads.png' }, locked: { name: 'The name is managed by the ERP integration.', qty: 'Quantity is synced from the warehouse system.' } },
-    { name: 'Premium Brake Pads', catalog: 'Accessories', kind: 'Subscription', status: 'Approved', url: 'https://liferay.com/products/premium-brake-pads', qty: 20, published: true, expire: daysFromNow(-60), updated: daysFromNow(-21, 16, 5), image: { src: thumb('P', '#f4e8ff', '#7a3aa8'), name: 'premium-brake-pads.png' } },
-    { name: 'Brake Rotors', catalog: 'Auto Parts', kind: 'Simple', status: 'Expired', url: 'https://liferay.com/products/brake-rotors', qty: 0, published: false, expire: daysFromNow(25), updated: daysFromNow(-30, 10, 40), image: { src: thumb('R', '#ffe9e9', '#b32a2a'), name: 'brake-rotors.png' } },
-    { name: 'Calipers', catalog: 'Motorcycle Parts', kind: 'Virtual', status: 'Approved', url: 'https://liferay.com/products/calipers', qty: 64, published: true, expire: daysFromNow(90), updated: daysFromNow(-35, 13, 10), image: { src: thumb('C', '#e7f0ff', '#2e5aac'), name: 'calipers.png' }, locked: { published: 'You need the Publish permission to change this.' } },
-    { name: 'Hoses', catalog: 'Safety Equipment', kind: 'Simple', status: 'Draft', url: 'https://liferay.com/products/hoses', qty: 210, published: false, expire: daysFromNow(-10), updated: daysFromNow(-38, 15, 55), image: { src: thumb('H', '#e9f7ee', '#287d3c'), name: 'hoses.png' } },
-    { name: 'Timing Belt', catalog: 'Auto Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/timing-belt', qty: 33, published: true, expire: daysFromNow(700), updated: daysFromNow(-40, 12, 0), image: { src: thumb('T', '#fff4e5', '#b95000'), name: 'timing-belt.png' } }
+    { name: 'My AVS sens', catalog: 'Auto Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/avs-sens', qty: 120, published: true, expire: daysFromNow(400), image: { src: thumb('A', '#e7f0ff', '#2e5aac'), name: 'avs-sens.png' } },
+    { name: 'Brake Fluid', catalog: 'Auto Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/brake-fluid', qty: 48, published: true, expire: daysFromNow(-200), image: { src: thumb('B', '#fff4e5', '#b95000'), name: 'brake-fluid.png' }, locked: { status: 'Only a Catalog Manager can change the status.' } },
+    { name: 'Premium Brake Fluid', catalog: 'Auto Parts', kind: 'Grouped', status: 'Draft', url: 'https://liferay.com/products/premium-brake-fluid', qty: 12, published: false, expire: daysFromNow(420), image: { src: thumb('P', '#fff4e5', '#b95000'), name: 'premium-brake-fluid.png' } },
+    { name: 'Wear Sensors', catalog: 'Truck Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/wear-sensors', qty: 300, published: true, expire: daysFromNow(-150), image: { src: thumb('W', '#e9f7ee', '#287d3c'), name: 'wear-sensors.png' } },
+    { name: 'Brake Pads', catalog: 'Auto Parts', kind: 'Simple', status: 'Pending', url: 'https://liferay.com/products/brake-pads', qty: 75, published: false, expire: daysFromNow(300), image: { src: thumb('B', '#f4e8ff', '#7a3aa8'), name: 'brake-pads.png' }, locked: { name: 'The name is managed by the ERP integration.', qty: 'Quantity is synced from the warehouse system.' } },
+    { name: 'Premium Brake Pads', catalog: 'Accessories', kind: 'Subscription', status: 'Approved', url: 'https://liferay.com/products/premium-brake-pads', qty: 20, published: true, expire: daysFromNow(-60), image: { src: thumb('P', '#f4e8ff', '#7a3aa8'), name: 'premium-brake-pads.png' } },
+    { name: 'Brake Rotors', catalog: 'Auto Parts', kind: 'Simple', status: 'Expired', url: 'https://liferay.com/products/brake-rotors', qty: 0, published: false, expire: daysFromNow(25), image: { src: thumb('R', '#ffe9e9', '#b32a2a'), name: 'brake-rotors.png' } },
+    { name: 'Calipers', catalog: 'Motorcycle Parts', kind: 'Virtual', status: 'Approved', url: 'https://liferay.com/products/calipers', qty: 64, published: true, expire: daysFromNow(90), image: { src: thumb('C', '#e7f0ff', '#2e5aac'), name: 'calipers.png' }, locked: { published: 'You need the Publish permission to change this.' } },
+    { name: 'Hoses', catalog: 'Safety Equipment', kind: 'Simple', status: 'Draft', url: 'https://liferay.com/products/hoses', qty: 210, published: false, expire: daysFromNow(-10), image: { src: thumb('H', '#e9f7ee', '#287d3c'), name: 'hoses.png' } },
+    { name: 'Timing Belt', catalog: 'Auto Parts', kind: 'Simple', status: 'Approved', url: 'https://liferay.com/products/timing-belt', qty: 33, published: true, expire: daysFromNow(700), image: { src: thumb('T', '#fff4e5', '#b95000'), name: 'timing-belt.png' } }
   ];
 
   // ────────────────────────────────────────────────────────────
@@ -176,7 +175,6 @@
     div.textContent = String(str);
     return div.innerHTML;
   }
-  function pad(n) { return n < 10 ? '0' + n : String(n); }
   function isSameDay(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
   }
@@ -186,8 +184,6 @@
     return t;
   }
   function formatDate(d) { return MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate() + ', ' + d.getFullYear(); }
-  function formatTime(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
-  function formatDateTime(d) { return formatDate(d) + ', ' + formatTime(d); }
 
   function monthIndex(word) {
     var w = word.toLowerCase();
@@ -198,21 +194,10 @@
   }
 
   // Parses what people actually type: "Oct 15, 2027", "October 15 2027",
-  // "10/15/2027", "2027-10-15", each optionally followed by "14:30"
-  // (date & time columns only). Returns a Date, or null when it isn't
+  // "10/15/2027" or "2027-10-15". Returns a Date, or null when it isn't
   // a real calendar date (so "Feb 31, 2027" is rejected too).
-  function parseDateText(text, withTime, base) {
+  function parseDateText(text) {
     var s = text.trim();
-    var hours = base ? base.getHours() : 0;
-    var minutes = base ? base.getMinutes() : 0;
-    var tm = /[\s,]+(\d{1,2}):(\d{2})$/.exec(s);
-    if (tm) {
-      if (!withTime) { return null; }
-      hours = parseInt(tm[1], 10);
-      minutes = parseInt(tm[2], 10);
-      if (hours > 23 || minutes > 59) { return null; }
-      s = s.slice(0, tm.index).trim();
-    }
     var y, mo, d, m;
     if ((m = /^([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})$/.exec(s))) {
       mo = monthIndex(m[1]); d = parseInt(m[2], 10); y = parseInt(m[3], 10);
@@ -224,16 +209,8 @@
     } else {
       return null;
     }
-    var out = new Date(y, mo, d, hours, minutes, 0, 0);
+    var out = new Date(y, mo, d);
     return (out.getFullYear() === y && out.getMonth() === mo && out.getDate() === d) ? out : null;
-  }
-
-  function parseTimeText(text) {
-    var m = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
-    if (!m) { return null; }
-    var h = parseInt(m[1], 10);
-    var mi = parseInt(m[2], 10);
-    return (h > 23 || mi > 59) ? null : { hours: h, minutes: mi };
   }
 
   // 6 full Monday-first weeks (42 cells) so every month's panel has
@@ -243,12 +220,6 @@
     var cells = [];
     for (var i = 0; i < 42; i++) { cells.push(new Date(year, month, 1 - leading + i)); }
     return cells;
-  }
-
-  function timeZoneName() {
-    try {
-      return new Date().toLocaleTimeString('en', { timeZoneName: 'short' }).split(' ').pop();
-    } catch (e) { return ''; }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -284,11 +255,6 @@
       if (date.getTime() < startOfToday().getTime()) { return { error: 'Expire date can’t be in the past' }; }
       return { value: date };
     },
-    datetime: function (date) {
-      if (!date) { return { error: 'Enter a valid date and time, e.g. Oct 15, 2027, 14:30' }; }
-      if (date.getTime() > Date.now()) { return { error: 'Updated can’t be in the future' }; }
-      return { value: date };
-    },
     image: function (draft) {
       if (!draft) { return { error: 'Choose an image first' }; }
       return { value: draft };
@@ -312,7 +278,6 @@
     label:    { kind: 'picker', icon: 'caret-bottom-l', width: 'hug', display: labelHtml },
     status:   { kind: 'picker', icon: 'caret-bottom-l', width: 'hug', display: labelHtml },
     date:     { kind: 'calendar', rule: 'date', icon: 'calendar', width: 'date', display: function (c, v) { return formatDate(v); } },
-    datetime: { kind: 'calendar', rule: 'datetime', icon: 'calendar', width: 'datetime', time: true, display: function (c, v) { return formatDateTime(v); } },
     image:    { kind: 'image', rule: 'image', icon: 'pencil', width: 'image', display: function (c, v) { return thumbHtml(v); } },
     boolean:  { kind: 'toggle' },
     action:   { kind: 'action', width: 'hug', link: true, display: function () { return 'View'; } }
@@ -681,7 +646,7 @@
   }
 
   // ────────────────────────────────────────────────────────────
-  // Editor: calendar (date, date & time). The value can be typed or
+  // Editor: calendar (date). The value can be typed or
   // picked — either updates the other — and ✓ / Enter validates and
   // saves, ✕ / Escape / clicking away cancels.
   // ────────────────────────────────────────────────────────────
@@ -689,15 +654,13 @@
     var ctx = begin(td);
     var col = ctx.col;
     var type = TYPES[col.type];
-    var withTime = !!type.time;
     var original = ctx.row[col.key];
     var id = 'editable-cell-tip-' + (++uid);
-    var tz = timeZoneName();
 
     var holder = htmlToElement(
       '<div class="editable-cell-select">' +
         '<div class="editable-cell editable-cell--editing' + widthClass(type) + '">' +
-          '<input type="text" class="editable-cell__input" aria-label="' + esc(col.label) + '" aria-describedby="' + id + '" placeholder="' + (withTime ? 'Oct 15, 2027, 14:30' : 'Oct 15, 2027') + '">' +
+          '<input type="text" class="editable-cell__input" aria-label="' + esc(col.label) + '" aria-describedby="' + id + '" placeholder="' + 'Oct 15, 2027' + '">' +
           '<svg class="lexicon-icon editable-cell__icon"><use href="#calendar"></use></svg>' +
           STATUS_ICONS + tooltipHtml(id) +
         '</div>' +
@@ -715,7 +678,6 @@
           '</div>' +
           '<div class="date-picker-panel__weekdays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>' +
           '<div class="date-picker-panel__grid js-date-grid" role="grid"></div>' +
-          (withTime ? '<div class="date-picker-panel__time"><span>Time</span><input type="text" class="date-picker-panel__time-input js-time" inputmode="numeric" maxlength="5" aria-label="Time" placeholder="HH:MM">' + (tz ? '<span class="date-picker-panel__time-tz">' + esc(tz) + '</span>' : '') + '</div>' : '') +
           '<div class="editable-cell__panel-actions">' +
             '<button type="button" class="btn btn--primary btn--sm btn--icon js-save" aria-label="Save"><svg class="lexicon-icon"><use href="#check"></use></svg></button>' +
             '<button type="button" class="btn btn--secondary btn--sm btn--icon js-cancel" aria-label="Cancel"><svg class="lexicon-icon"><use href="#times"></use></svg></button>' +
@@ -726,7 +688,6 @@
     var pill = holder.querySelector('.editable-cell');
     var panel = holder.querySelector('.js-panel');
     var input = holder.querySelector('.editable-cell__input');
-    var timeInput = holder.querySelector('.js-time');
     var grid = holder.querySelector('.js-date-grid');
     var monthText = holder.querySelector('.js-date-month-text');
     var yearText = holder.querySelector('.js-date-year-text');
@@ -736,8 +697,7 @@
     var viewYear = original.getFullYear();
     var viewMonth = original.getMonth();
 
-    input.value = withTime ? formatDateTime(original) : formatDate(original);
-    if (timeInput) { timeInput.value = formatTime(original); }
+    input.value = formatDate(original);
 
     var s = mount(td, holder, pill, input);
     s.relayout = function () { return panel.parentNode ? place(panel, pill, { gap: 4, flip: true }) : false; };
@@ -765,12 +725,11 @@
     }
 
     function writeInput() {
-      input.value = withTime ? formatDateTime(selected) : formatDate(selected);
+      input.value = formatDate(selected);
     }
 
-    // Picking a day keeps the time already chosen.
     function pickDay(date) {
-      selected = new Date(date.getFullYear(), date.getMonth(), date.getDate(), selected.getHours(), selected.getMinutes());
+      selected = date;
       focused = selected;
       writeInput();
       s.clear();
@@ -796,44 +755,26 @@
     // soon as it parses, and is left alone while it doesn't.
     s.on(input, 'input', function () {
       s.clear();
-      var parsed = parseDateText(input.value, withTime, selected);
+      var parsed = parseDateText(input.value);
       if (!parsed) { return; }
       selected = parsed;
       focused = parsed;
       viewYear = parsed.getFullYear();
       viewMonth = parsed.getMonth();
-      if (timeInput) { timeInput.value = formatTime(parsed); timeInput.removeAttribute('aria-invalid'); }
       renderGrid(false);
     });
 
-    if (timeInput) {
-      s.on(timeInput, 'input', function () {
-        s.clear();
-        timeInput.removeAttribute('aria-invalid');
-        var t = parseTimeText(timeInput.value);
-        if (!t) { return; }
-        selected = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), t.hours, t.minutes);
-        writeInput();
-      });
-    }
-
     function save() {
       if (s.busy) { return; }
-      if (timeInput && !parseTimeText(timeInput.value)) {
-        timeInput.setAttribute('aria-invalid', 'true');
-        s.fail('Enter a valid time (HH:MM)');
-        timeInput.focus();
-        return;
-      }
-      var res = RULES[type.rule](parseDateText(input.value, withTime, selected));
+      var res = RULES[type.rule](parseDateText(input.value));
       if (res.error) { s.fail(res.error); input.focus(); return; }
-      s.commit(res.value, function (v) { input.value = withTime ? formatDateTime(v) : formatDate(v); });
+      s.commit(res.value, function (v) { input.value = formatDate(v); });
     }
 
     s.on(holder, 'keydown', function (e) {
       if (s.busy) { return; }
       if (e.key === 'Escape') { e.preventDefault(); s.cancel(); }
-      else if (e.key === 'Enter' && (e.target === input || e.target === timeInput)) { e.preventDefault(); save(); }
+      else if (e.key === 'Enter' && e.target === input) { e.preventDefault(); save(); }
       else if (e.key === 'ArrowDown' && e.target === input) { e.preventDefault(); renderGrid(true); }
     });
     s.on(grid, 'keydown', function (e) {
