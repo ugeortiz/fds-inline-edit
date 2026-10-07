@@ -4615,38 +4615,42 @@
   width: var(--spacing-7);
 }
 
-
 /* ============================================================
    EDITABLE CELL (FDS inline edit)
    Source: Figma — design-how-to-create-and-edit-elements-in-FDS,
-   node 2912:18461 ("Text Inputs" — Hover / Focus / Validation /
-   Interaction). Spike ticket LPD-9102.
-   A table cell that doubles as a trigger for inline editing —
-   driven by prototypes/fds-products-inline-edit.html's script,
-   not just CSS modifier classes.
-   Idle (.editable-cell, a <button>): plain text + a hover-only
-   affordance icon (pencil for free text, caret for a select).
-   Editing (.editable-cell--editing, a <div> that replaces the
-   button): text fields get a live <input>; selects get a
-   .dropdown listbox instead (see the SELECT VARIANT block below).
-   Save/Cancel (.editable-cell__actions) float BELOW the pill via
-   position: absolute so they never stretch the row — an earlier
-   draft put them inline next to the input instead, which fixed
-   the row-height problem but didn't match the real Figma/DXP
-   look, so this went back to floating with a proper drop shadow.
-   --error / --success layer onto --editing after a save attempt,
-   tinting the pill and swapping .editable-cell__status-icon (text
-   fields only — a selection from a fixed list can't be invalid).
-   Every state — idle, hover, editing — is width: 100% of the
-   cell; the column's width comes from ordinary table auto-layout,
-   not from any one row's content.
+   node 2912:18461. Spike ticket LPD-9102.
+
+   A table cell that doubles as the trigger for editing its own
+   value. Driven by the script in index.html, so every state is
+   real behavior, not just a modifier class.
+
+   One model for every field type
+   ------------------------------
+     idle      .editable-cell            plain value + hover-only icon
+     editing   .editable-cell--editing   the same pill, now live
+     error     --error                   red pill + icon + .tooltip text
+     success   --success                 green pill + check (~700ms),
+                                         then back to idle
+
+   Two ways to commit a change:
+     confirm — text, link, quantity, date, date & time, image.
+               The user edits a draft; ✓ (Enter) saves, ✕ (Escape)
+               cancels. Validation runs on save and on blur. An
+               invalid draft stays open with its error and is never
+               written, so cancelling always restores the old value.
+     instant — select, label, status, boolean. Picking IS the
+               commit and there is no invalid draft, so it goes
+               straight to the success flash.
+   Read-only cells (--readonly) show a lock and explain why on click.
+
+   Floating UI (tooltip, ✓/✕, option list, calendar, image panel)
+   is position: fixed and placed by script, so the table can never
+   clip it and it flips above the cell when there's no room below.
+   Every state keeps the cell's width: 100% unless a field opts into
+   a fixed/hugging width with an --w-* modifier (short, fixed-format
+   values such as status, dates and quantity).
    ============================================================ */
 
-/* width: 100% at every stage — idle, hover, active, doesn't matter —
-   so the chip always reads as "the same fixed grid cell", never
-   resizing itself. The column's own width comes from normal table
-   auto-layout (its widest natural content across all rows), and
-   every row's chip just fills whatever that turns out to be. */
 .editable-cell {
   align-items: center;
   background: transparent;
@@ -4659,28 +4663,33 @@
   font-size: var(--font-size-sm);
   gap: var(--spacing-3);
   height: var(--spacing-9);
-  justify-content: space-between; /* text left, affordance icon pinned to the right edge */
+  justify-content: space-between; /* value left, affordance icon pinned right */
   padding: var(--spacing-2) var(--spacing-3) var(--spacing-2) var(--spacing-2);
   text-align: left;
   width: 100%;
 }
 
-.editable-cell:hover { background: var(--color-light-l1); border-color: var(--color-light-d1); }
+/* Hover highlight is for idle cells only — an editing / error /
+   success pill keeps its own tint, a read-only one stays flat. */
+.editable-cell:hover:not(.editable-cell--editing):not(.editable-cell--error):not(.editable-cell--success):not(.editable-cell--readonly):not(.editable-cell--action) {
+  background: var(--color-light-l1);
+  border-color: var(--color-light-d1);
+}
 .editable-cell:focus-visible { box-shadow: var(--focus-ring); outline: none; }
 
-/* min-width: 0 lets this flex item actually shrink below its own
-   text's natural width — without it, ellipsis below never kicks in
-   inside a flex row. Truncation itself only bites where something
-   (the select variant, below) also caps a max-width. */
+/* min-width: 0 lets this flex item shrink below its text's natural
+   width — without it the ellipsis never kicks in inside a flex row. */
 .editable-cell__text {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.editable-cell__text--link { color: var(--color-primary); text-decoration: underline; }
 
-/* Pencil affordance — hidden until the trigger is hovered/focused,
-   so idle rows read as plain text, not as a dropdown. */
+/* Affordance icon — pencil (free input), caret (pick from a list),
+   calendar (date) or lock (read-only). Hidden until hover/focus so
+   idle rows read as plain values. */
 .editable-cell__icon {
   color: var(--color-secondary);
   flex-shrink: 0;
@@ -4688,17 +4697,10 @@
   transition: opacity 100ms ease;
 }
 .editable-cell:hover .editable-cell__icon,
-.editable-cell:focus-visible .editable-cell__icon {
-  opacity: 1;
-}
+.editable-cell:focus-visible .editable-cell__icon { opacity: 1; }
 
-
-/* Editing — input replaces the trigger button, same footprint.
-   Width is set ONCE from the `size` attribute when the editor
-   opens (roughly matching the original value) and never resized
-   again — past that, the native <input> scrolls its own text as
-   you type, same as a normal DXP input. Double ring via the
-   shared --focus-ring token, matching Lexicon's real focus style. */
+/* Editing — same pill, live. Double ring from the shared
+   --focus-ring token, matching Lexicon's real focus style. */
 .editable-cell--editing {
   align-items: center;
   background: var(--color-primary-l3);
@@ -4709,9 +4711,10 @@
   gap: var(--spacing-2);
   height: var(--spacing-9);
   padding: var(--spacing-1) var(--spacing-3);
-  position: relative; /* offset parent for the floating .editable-cell__actions */
-  width: 100%; /* fills the cell — hover hugs content, editing takes the column */
+  position: relative;
+  width: 100%;
 }
+.editable-cell--editing .editable-cell__icon { opacity: 1; }
 
 .editable-cell__input {
   background: transparent;
@@ -4724,138 +4727,142 @@
   outline: none;
   padding: 0;
 }
+.editable-cell__input--center { text-align: center; }
+.editable-cell__step { flex-shrink: 0; }
 
-/* Both icons sit in the DOM at all times, each display:none by
-   default (overriding .lexicon-icon's own display: inline-block —
-   a class selector beats it since both have equal specificity and
-   this one comes later in the file) and switched on purely by the
-   matching --error/--success class on the wrap. No JS ever swaps
-   a `<use>` reference or toggles `hidden` at runtime. */
+/* Both status icons sit in the DOM from the start, display:none by
+   default, switched on only by the --error / --success class. No
+   script ever swaps a <use> or toggles `hidden` (neither re-renders
+   reliably in WebKit). */
 .editable-cell__status-icon { display: none; flex-shrink: 0; }
 .editable-cell--error .editable-cell__status-icon--error { color: var(--color-danger); display: inline-block; }
 .editable-cell--success .editable-cell__status-icon--success { color: var(--color-success); display: inline-block; }
 
-/* Real .tooltip component (dark pill + arrow), just repositioned
-   to float above the pill instead of sitting in normal flow —
-   same always-in-DOM / CSS-only-visibility pattern as the icons. */
+.editable-cell--error { background: var(--color-danger-l2); border-color: var(--color-danger-l1); }
+.editable-cell--success { background: var(--color-success-l2); border-color: var(--color-success-l1); }
+.editable-cell--editing.editable-cell--success .editable-cell__input { color: var(--color-success-d2); }
+
+/* The status icon takes the affordance icon's place, not its side. */
+.editable-cell--editing.editable-cell--error > .editable-cell__icon,
+.editable-cell--editing.editable-cell--success > .editable-cell__icon { display: none; }
+
+/* Width modifiers — short fixed-format values keep a steady size
+   in every state (idle, editing, confirming) instead of following
+   the column or whatever text they currently hold. */
+.editable-cell--w-hug,
+.editable-cell--w-image { display: inline-flex; width: auto; }
+.editable-cell--w-date { display: inline-flex; width: 152px; }
+.editable-cell--w-datetime { display: inline-flex; width: 196px; }
+.editable-cell--w-qty { display: inline-flex; width: 148px; }
+.editable-cell--w-link { display: inline-flex; width: 220px; }
+
+/* Boolean — the toggle IS the control, so it's shown at rest and a
+   click commits. The success flash reserves its icon's space so the
+   cell doesn't jump. */
+.editable-cell--toggle { cursor: default; gap: var(--spacing-3); justify-content: flex-start; padding: 0 var(--spacing-3); }
+.editable-cell--toggle .editable-cell__status-icon--success { display: inline-block; visibility: hidden; }
+.editable-cell--toggle.editable-cell--success .editable-cell__status-icon--success { visibility: visible; }
+
+/* Action link — a row action rendered as a link, not an editable value:
+   no pill, no affordance icon. */
+.editable-cell--action { padding-left: 0; padding-right: 0; }
+.editable-cell--action:hover .editable-cell__text { text-decoration: none; }
+
+/* Read-only — not editable (system data, permissions, derived from
+   the backend). Lock on hover; clicking explains why. */
+.editable-cell--readonly { color: var(--color-secondary); cursor: not-allowed; }
+
+/* Floating pieces. The tooltip is the real .tooltip component,
+   anchored above the pill; the rest sit below it. */
 .editable-cell__tooltip {
-  bottom: 100%;
   display: none;
-  left: 50%;
-  margin-bottom: var(--spacing-3);
-  position: absolute;
-  transform: translateX(-50%);
+  pointer-events: none;
+  position: fixed;
   white-space: nowrap;
-  z-index: 3;
+  z-index: 1000;
 }
 .editable-cell--error .editable-cell__tooltip { display: inline-block; }
 
-/* Save/Cancel float BELOW the pill instead of stretching the row —
-   matches the Figma "Inline Icons" cluster (drop shadow + all). */
+.editable-cell__hint-tip {
+  max-width: 260px;
+  pointer-events: none;
+  position: fixed;
+  z-index: 1000;
+}
+
 .editable-cell__actions {
   display: flex;
   filter: drop-shadow(0 4px 6px rgba(39, 40, 51, 0.25));
   gap: var(--spacing-2);
-  margin-top: var(--spacing-4); /* clears the focus-ring's 4px outer glow, not just the border */
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 2;
+  position: fixed;
+  z-index: 1000;
 }
 
-/* Not scoped to --editing on purpose: Name only ever carries these
-   mid-edit, but the Expire Date field also tints its IDLE trigger
-   permanently (past = invalid, future = valid) — same classes,
-   two different lifetimes. */
-.editable-cell--error { background: var(--color-danger-l2); border-color: var(--color-danger-l1); }
-.editable-cell--error .editable-cell__icon { color: var(--color-danger); }
-
-.editable-cell--success { background: var(--color-success-l2); border-color: var(--color-success-l1); }
-.editable-cell--success .editable-cell__icon { color: var(--color-success); }
-.editable-cell--editing.editable-cell--success .editable-cell__input { color: var(--color-success-d2); }
-
-/* A select field reuses .editable-cell--editing for its open-state
-   trigger (same pill, same focus ring, same full-cell width) — but
-   its icon is the caret, not the pencil, so it has to stay visible
-   the whole time instead of only on hover. */
-.editable-cell--editing .editable-cell__icon { opacity: 1; }
-
-/* ============================================================
-   EDITABLE CELL — SELECT VARIANT
-   Wraps the open-state trigger + the option list. Block (not
-   inline-block) so its width:100% child actually resolves against
-   the <td>, not against its own shrink-to-fit box. position:
-   relative makes it the offset parent for .editable-cell__select-menu,
-   same floating-below approach as .editable-cell__actions above,
-   just reusing the stock .dropdown component for the list itself. */
 .editable-cell-select { display: block; position: relative; }
 
-/* Idle, active, doesn't matter — .editable-cell and .editable-cell--editing
-   both already default to width: 100%, so Catalog needs no field-type-
-   specific override at all now. Longer options still truncate via the
-   .editable-cell__text ellipsis rule if they ever outgrow the column.
-
-   Status is the deliberate exception: it only ever holds a short,
-   fixed-vocabulary .label chip (Approved/Draft/…), never long text,
-   so forcing it to the column's full width would just leave an odd
-   gap around a small badge — same reasoning as a GitHub/Jira status
-   picker, which always hugs the badge itself, open or not. */
-.js-status-trigger,
-.editable-cell-select--status .editable-cell--editing {
-  display: inline-flex;
-  width: auto;
-}
-
 .editable-cell__select-menu {
-  left: 0;
-  margin-top: var(--spacing-2);
   max-height: 240px;
   overflow-y: auto;
-  position: absolute;
-  top: 100%;
-  z-index: 3;
+  position: fixed;
+  z-index: 1000;
 }
 
-/* ============================================================
-   EDITABLE CELL — DATE VARIANT
-   Reuses the real .date-picker-panel component as-is (see
-   showcases/datepicker.html) — only positioning it here, scoped
-   to this wrapper so the showcase's own static usage elsewhere
-   is untouched. Month/year labels keep the caret-double-l icon
-   for visual fidelity but are plain <span>s (no quick month/year
-   picker built yet — the day grid itself is fully functional). */
-/* right: 0 (not left: 0) — Modified Date sits near the right edge
-   of the table, and the panel is 366px wide, so anchoring it to
-   the trigger's left edge pushed most of it off past the viewport.
-   Extending leftward from the right edge keeps it on-screen. */
-.editable-cell-select--date .date-picker-panel {
-  margin-top: var(--spacing-2);
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 3;
-}
-
-/* Same exception as Status: a formatted date ("Sep 22, 2026") never
-   needs the column's full width. But unlike Status, its own text
-   isn't perfectly fixed-length ("Jul 3" vs "Sep 22") — and while the
-   picker is open, clicking through days keeps changing that text
-   live. A fixed width (not width: auto hugging whatever's currently
-   shown) stops the chip from jittering as you browse, and keeps
-   every row's idle chip the same size too. */
-.js-date-trigger,
-.editable-cell-select--date .editable-cell--editing {
-  display: inline-flex;
-  width: 150px;
-}
+/* Calendar — the real .date-picker-panel, just positioned and given
+   a ✓/✕ footer. Month/year labels keep the caret for visual fidelity
+   but are plain spans (no quick month/year picker yet). */
+.editable-cell-select .date-picker-panel,
+.editable-cell__panel { position: fixed; z-index: 1000; }
 
 .js-date-month-label,
 .js-date-year-label {
-  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-2);
+  color: var(--color-dark);
+  display: inline-flex;
   font-family: var(--font-family-base);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  color: var(--color-dark);
+  gap: var(--spacing-2);
 }
+.date-picker-panel__time-input[aria-invalid="true"] {
+  background: var(--color-danger-l2);
+  border-color: var(--color-danger-l1);
+}
+
+/* Generic panel (image) + shared ✓/✕ footer for any panel. */
+.editable-cell__panel {
+  background: var(--color-white);
+  border-radius: var(--rounded-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-family-base);
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+  width: 320px;
+}
+.editable-cell__panel-row { display: flex; gap: var(--spacing-4); }
+.editable-cell__image-preview {
+  align-items: center;
+  background: var(--color-light-l1);
+  border: 1px solid var(--color-secondary-l3);
+  border-radius: var(--rounded-md);
+  display: flex;
+  flex-shrink: 0;
+  height: 112px;
+  justify-content: center;
+  overflow: hidden;
+  width: 112px;
+}
+.editable-cell__image-preview img { height: 100%; object-fit: cover; width: 100%; }
+.editable-cell__image-body { align-items: flex-start; display: flex; flex-direction: column; gap: var(--spacing-2); min-width: 0; }
+.editable-cell__image-name { color: var(--color-dark); font-size: var(--font-size-sm); overflow-wrap: anywhere; }
+.editable-cell__help { color: var(--color-secondary); font-size: var(--font-size-sm); }
+
+.editable-cell__panel-actions {
+  border-top: 1px solid var(--color-secondary-l3);
+  display: flex;
+  gap: var(--spacing-2);
+  justify-content: flex-end;
+  padding-top: var(--spacing-4);
+}
+.date-picker-panel__time + .editable-cell__panel-actions { border-top: 0; padding-top: 0; }
