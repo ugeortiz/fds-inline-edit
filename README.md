@@ -35,6 +35,14 @@ Every field follows the same rules, so behavior is predictable:
 
 Keyboard support throughout: Enter/Escape to save/cancel, ↑/↓ to move between rows, arrow keys through the calendar and option lists.
 
+## When the server fails
+
+The switch at the top of the page turns the server off. Every save is a request (a short spinner while it's in flight), and with the server off each field fails the same way: nothing is written, the cell turns red and the tooltip says "Couldn’t save. The server isn’t responding."
+
+- **Text, link, quantity, date, image:** the editor stays open with your draft intact. ✓ retries, ✕ cancels and restores the previous value.
+- **Catalog, Type, Status:** the list stays open on the old value. Pick again to retry, Escape to cancel.
+- **Published:** the toggle flips back to its previous state, flashes red and explains why.
+
 ## Status
 
 Actively evolving — more interaction refinements are still being explored.

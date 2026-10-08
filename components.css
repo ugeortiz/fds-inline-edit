@@ -4643,6 +4643,19 @@
                straight to the success flash.
    Read-only cells (--readonly) show a lock and explain why on click.
 
+   Saving and server failure
+   -------------------------
+   Every commit is a request. While it's in flight the pill shows
+   --saving (spinner, controls disabled). If it succeeds, the green
+   flash above. If the server can't complete it, the value is never
+   written and the cell shows --error with the reason:
+     confirm fields — stay open with the draft intact; ✓ retries,
+                      ✕ cancels and restores the old value.
+     pick fields    — stay open on the old value; pick again to retry,
+                      Escape to cancel.
+     boolean        — flips back to its previous state, flashes red and
+                      explains why in a transient tooltip.
+
    Floating UI (tooltip, ✓/✕, option list, calendar, image panel)
    is position: fixed and placed by script, so the table can never
    clip it and it flips above the cell when there's no room below.
@@ -4735,6 +4748,12 @@
    script ever swaps a <use> or toggles `hidden` (neither re-renders
    reliably in WebKit). */
 .editable-cell__status-icon { display: none; flex-shrink: 0; }
+
+/* Spinner: also static in the DOM, shown only while --saving. It takes
+   the affordance icon's place, so the pill never changes width. */
+.editable-cell__spinner { display: none; flex-shrink: 0; }
+.editable-cell--saving .editable-cell__spinner { display: inline-block; }
+.editable-cell--editing.editable-cell--saving > .editable-cell__icon { display: none; }
 .editable-cell--error .editable-cell__status-icon--error { color: var(--color-danger); display: inline-block; }
 .editable-cell--success .editable-cell__status-icon--success { color: var(--color-success); display: inline-block; }
 
@@ -4759,7 +4778,11 @@
    click commits. The success flash reserves its icon's space so the
    cell doesn't jump. */
 .editable-cell--toggle { cursor: default; gap: var(--spacing-3); justify-content: flex-start; padding: 0 var(--spacing-3); }
+.editable-cell--toggle { position: relative; }
 .editable-cell--toggle .editable-cell__status-icon--success { display: inline-block; visibility: hidden; }
+/* Spinner and error take the success icon's reserved slot. */
+.editable-cell--toggle .editable-cell__spinner,
+.editable-cell--toggle .editable-cell__status-icon--error { position: absolute; right: var(--spacing-3); }
 .editable-cell--toggle.editable-cell--success .editable-cell__status-icon--success { visibility: visible; }
 
 /* Action link — a row action rendered as a link, not an editable value:

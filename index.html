@@ -37,6 +37,7 @@
     .showcase p.lead { color: var(--color-secondary); font-size: var(--font-size-sm); margin: 0 0 var(--spacing-8); max-width: 820px; }
     .showcase__row { margin-bottom: var(--spacing-9); }
     .showcase__label { display: block; font-size: 10px; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-secondary); margin-bottom: var(--spacing-3); }
+    .showcase__controls { align-items: center; display: flex; gap: var(--spacing-5); margin-bottom: var(--spacing-6); }
     .showcase__scroll { overflow-x: auto; }
     .showcase__scroll .table { min-width: 1360px; }
   </style>
@@ -65,8 +66,17 @@
 <main class="showcase">
   <h1>Products — inline edit (table view)</h1>
   <p class="lead">
-    LPD-9102 — inline editing for the Frontend Data Set, table view. Every field renderer is on the table and they all validate and commit the same way: edit, then ✓ (or Enter) to save and ✕ (or Escape) to cancel. Try an empty name, a bad URL, a quantity of 1000, a past expire date, a date typed by hand, and the locked cells.
+    LPD-9102 — inline editing for the Frontend Data Set, table view. Every field renderer is on the table and they all validate and commit the same way: edit, then ✓ (or Enter) to save and ✕ (or Escape) to cancel. Try an empty name, a bad URL, a quantity of 1000, a past expire date, a date typed by hand, and the locked cells. Switch the server off to see what each field does when a save fails.
   </p>
+
+  <div class="showcase__controls">
+    <label class="toggle toggle--sm">
+      <input type="checkbox" class="toggle__input" id="js-server" checked>
+      <span class="toggle__track"><span class="toggle__dot"><svg class="lexicon-icon"><use href="#check"></use></svg></span></span>
+      <span class="toggle__label">Server online</span>
+    </label>
+    <span class="label label--sm label--danger" id="js-server-badge" style="display: none">Offline — saves will fail</span>
+  </div>
 
   <div class="showcase__row">
     <span class="showcase__label">Products</span>
@@ -300,7 +310,8 @@
 
   var STATUS_ICONS =
     '<svg class="lexicon-icon editable-cell__status-icon editable-cell__status-icon--error" aria-hidden="true"><use href="#exclamation-full"></use></svg>' +
-    '<svg class="lexicon-icon editable-cell__status-icon editable-cell__status-icon--success" aria-hidden="true"><use href="#check-circle-full"></use></svg>';
+    '<svg class="lexicon-icon editable-cell__status-icon editable-cell__status-icon--success" aria-hidden="true"><use href="#check-circle-full"></use></svg>' +
+    '<span class="loading-animation loading-animation-sm editable-cell__spinner" aria-hidden="true"></span>';
 
   function cellHtml(col, row) {
     var type = TYPES[col.type];
@@ -378,6 +389,26 @@
   }
 
   // ────────────────────────────────────────────────────────────
+  // Server — every commit is a request. The switch at the top of the
+  // page turns the server off so each field's failure path can be seen.
+  // ────────────────────────────────────────────────────────────
+  var SERVER_LATENCY = 700;
+  var SERVER_ERROR = 'Couldn’t save. The server isn’t responding.';
+  var serverSwitch = document.getElementById('js-server');
+  var serverBadge = document.getElementById('js-server-badge');
+
+  serverSwitch.addEventListener('change', function () {
+    serverBadge.style.display = serverSwitch.checked ? 'none' : '';
+    serverSwitch.parentNode.querySelector('.toggle__label').textContent = serverSwitch.checked ? 'Server online' : 'Server offline';
+  });
+
+  function request(onSuccess, onFailure) {
+    window.setTimeout(function () {
+      if (serverSwitch.checked) { onSuccess(); } else { onFailure(); }
+    }, SERVER_LATENCY);
+  }
+
+  // ────────────────────────────────────────────────────────────
   // Session — one open editor. Owns the shared pieces of the model:
   // error / success state, the single error tooltip, commit (write
   // data + green flash) and cancel (restore the old value).
@@ -446,21 +477,51 @@
     if (this.focusEl) { this.focusEl.setAttribute('aria-invalid', 'false'); }
   };
 
-  // Valid draft: write it, drop the floating UI, flash green, then
-  // settle back to idle showing the saved value.
+  Session.prototype.setDisabled = function (disabled) {
+    if (this.focusEl && 'disabled' in this.focusEl) { this.focusEl.disabled = disabled; }
+    Array.prototype.forEach.call(this.holder.querySelectorAll('.js-save, .js-cancel, .js-step, .js-choose'), function (btn) {
+      btn.disabled = disabled;
+    });
+    this.pill.setAttribute('aria-busy', disabled ? 'true' : 'false');
+  };
+
+  // Valid draft: send it. Nothing is written until the server accepts
+  // it — then the floating UI goes, the cell flashes green and settles
+  // to idle. If the server fails, the editor stays open, intact, with
+  // the reason, so ✓ retries and ✕ cancels.
   Session.prototype.commit = function (value, showValue) {
     var self = this;
     this.busy = true;
-    this.row[this.col.key] = value;
     this.clear();
-    this.pill.classList.add('editable-cell--success');
-    if (this.actions) { this.actions.remove(); }
-    if (this.panel) { this.panel.remove(); }
-    var menu = this.holder.querySelector('.editable-cell__select-menu');
-    if (menu) { menu.remove(); }
-    if (showValue) { showValue(value); }
-    if (this.focusEl && 'disabled' in this.focusEl) { this.focusEl.disabled = true; }
-    window.setTimeout(function () { self.close(); }, 700);
+    this.pill.classList.add('editable-cell--saving');
+    this.setDisabled(true);
+
+    request(function () {
+      self.row[self.col.key] = value;
+      self.pill.classList.remove('editable-cell--saving');
+      self.pill.classList.add('editable-cell--success');
+      if (self.actions) { self.actions.remove(); }
+      if (self.panel) { self.panel.remove(); }
+      var menu = self.holder.querySelector('.editable-cell__select-menu');
+      if (menu) { menu.remove(); }
+      if (showValue) { showValue(value); }
+      window.setTimeout(function () { self.close(); }, 700);
+    }, function () {
+      self.pill.classList.remove('editable-cell--saving');
+      if (active !== self) {
+        // Another cell took over while this was in flight: nothing to
+        // retry in place, so drop the draft and say what happened.
+        self.close(true);
+        var trigger = self.td.querySelector('.js-cell-trigger');
+        if (trigger) { showHint(trigger, SERVER_ERROR); }
+        return;
+      }
+      self.busy = false;
+      self.setDisabled(false);
+      self.fail(SERVER_ERROR);
+      var target = self.focusEl || self.holder.querySelector('.dropdown__item.is-active, .dropdown__item, .js-choose');
+      if (target) { target.focus(); }
+    });
   };
 
   Session.prototype.cancel = function () {
@@ -617,6 +678,7 @@
       item.className = 'dropdown__item' + (isCurrent ? ' is-active' : '');
       item.innerHTML = '<span class="dropdown__item-text">' + type.display(col, option) + '</span>';
       item.addEventListener('click', function () {
+        if (s.busy) { return; }
         s.commit(option, function (v) { pill.querySelector('.editable-cell__text').innerHTML = type.display(col, v); });
       });
       li.appendChild(item);
@@ -889,13 +951,30 @@
     var col = COLUMNS[+td.getAttribute('data-col')];
     var row = PRODUCTS[+td.getAttribute('data-row')];
     var wrap = checkbox.closest('.editable-cell');
-    row[col.key] = checkbox.checked;
+    var wanted = checkbox.checked;
     checkbox.disabled = true;
-    wrap.classList.add('editable-cell--success');
-    window.setTimeout(function () {
-      wrap.classList.remove('editable-cell--success');
+    wrap.classList.remove('editable-cell--error');
+    wrap.classList.add('editable-cell--saving');
+
+    request(function () {
+      row[col.key] = wanted;
+      wrap.classList.remove('editable-cell--saving');
+      wrap.classList.add('editable-cell--success');
+      window.setTimeout(function () {
+        wrap.classList.remove('editable-cell--success');
+        checkbox.disabled = false;
+        checkbox.focus();
+      }, 700);
+    }, function () {
+      // Nothing was saved, so the toggle goes back to what it was.
+      checkbox.checked = !wanted;
       checkbox.disabled = false;
-    }, 700);
+      checkbox.focus();
+      wrap.classList.remove('editable-cell--saving');
+      wrap.classList.add('editable-cell--error');
+      showHint(wrap, SERVER_ERROR);
+      window.setTimeout(function () { wrap.classList.remove('editable-cell--error'); }, 2600);
+    });
   }
 
   // ────────────────────────────────────────────────────────────
