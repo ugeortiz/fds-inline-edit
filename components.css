@@ -4740,8 +4740,9 @@
   outline: none;
   padding: 0;
 }
-.editable-cell__input--center { text-align: center; }
-.editable-cell__step { flex-shrink: 0; }
+/* The kit's stacked caret spinner (time picker), as an in-flow flex item
+   instead of absolutely positioned over the field. */
+.editable-cell--editing .time-picker__spinner { flex-shrink: 0; position: static; }
 
 /* Both status icons sit in the DOM from the start, display:none by
    default, switched on only by the --error / --success class. No

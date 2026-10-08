@@ -16,7 +16,7 @@ One live "Products" table with the FDS field renderers, all of them actually int
 | Type | Label | Option list rendering labels |
 | Status | Status | Option list rendering status labels |
 | Link | Link | Inline input, must be a valid URL |
-| Quantity | Quantity selector | Inline input with − / + steppers, whole number 0–999 |
+| Quantity | Quantity selector | Inline input with the Clay stacked ▲▼ spinner (or ↑/↓ keys), whole number 0–999 |
 | Published | Boolean | Toggle |
 | Expire Date | Date | Calendar, or type the date; can't be in the past |
 | Details | Action link | Not editable inline, shows what it does |

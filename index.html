@@ -742,11 +742,16 @@
 
     var pill = htmlToElement(
       '<div class="editable-cell editable-cell--editing' + widthClass(type) + '">' +
-        (isQty ? '<button type="button" class="btn btn--borderless btn--sm btn--icon editable-cell__step js-step" data-step="-1" aria-label="Decrease"><svg class="lexicon-icon"><use href="#hr"></use></svg></button>' : '') +
-        '<input type="text" class="editable-cell__input' + (isQty ? ' editable-cell__input--center' : '') + '" aria-label="' + esc(col.label) + '" aria-describedby="' + id + '"' + (isQty ? ' inputmode="numeric"' : '') + '>' +
-        (isQty ? '<button type="button" class="btn btn--borderless btn--sm btn--icon editable-cell__step js-step" data-step="1" aria-label="Increase"><svg class="lexicon-icon"><use href="#plus"></use></svg></button>'
-               : '<svg class="lexicon-icon editable-cell__icon"><use href="#' + type.icon + '"></use></svg>') +
-        STATUS_ICONS + tooltipHtml(id) + actionsHtml() +
+        '<input type="text" class="editable-cell__input" aria-label="' + esc(col.label) + '" aria-describedby="' + id + '"' + (isQty ? ' inputmode="numeric"' : '') + '>' +
+        (isQty ? '' : '<svg class="lexicon-icon editable-cell__icon"><use href="#' + type.icon + '"></use></svg>') +
+        STATUS_ICONS + tooltipHtml(id) +
+        // Same stacked spinner Clay uses inside its time field: steps the
+        // number without a button taking over the input.
+        (isQty ? '<span class="time-picker__spinner">' +
+          '<button type="button" class="js-step" data-step="1" aria-label="Increase"><svg class="lexicon-icon lexicon-icon-sm"><use href="#caret-top"></use></svg></button>' +
+          '<button type="button" class="js-step" data-step="-1" aria-label="Decrease"><svg class="lexicon-icon lexicon-icon-sm"><use href="#caret-bottom"></use></svg></button>' +
+        '</span>' : '') +
+        actionsHtml() +
       '</div>');
     var input = pill.querySelector('.editable-cell__input');
     input.value = String(original);
