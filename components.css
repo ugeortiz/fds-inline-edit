@@ -4796,17 +4796,25 @@
 
 /* Floating pieces. The tooltip is the real .tooltip component,
    anchored above the pill; the rest sit below it. */
+/* Sized by its text (the base .tooltip caps at 240px, which clipped
+   one-line messages) and wrapping only past 320px. The arrow follows
+   the pill's centre via --tip-arrow even when the box is nudged to stay
+   inside the viewport. */
 .editable-cell__tooltip {
   display: none;
+  max-width: 320px;
   pointer-events: none;
   position: fixed;
-  white-space: nowrap;
+  width: max-content;
   z-index: 1000;
 }
+.editable-cell__tooltip::after,
+.editable-cell__hint-tip::after { left: var(--tip-arrow, 50%); }
 .editable-cell--error .editable-cell__tooltip { display: inline-block; }
 
 .editable-cell__hint-tip {
-  max-width: 260px;
+  max-width: 320px;
+  width: max-content;
   pointer-events: none;
   position: fixed;
   z-index: 1000;

@@ -383,6 +383,11 @@
     left = Math.max(8, Math.min(left, vw - w - 8));
     var above = opts.side === 'above';
     if (!above && opts.flip && r.bottom + gap + h > vh - 8 && r.top - gap - h >= 8) { above = true; }
+    if (opts.arrow) {
+      // Keep a tooltip's arrow pointing at the anchor's centre even
+      // when the box had to shift to stay inside the viewport.
+      el.style.setProperty('--tip-arrow', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - left)) + 'px');
+    }
     el.style.left = left + 'px';
     el.style.top = (above ? r.top - gap - h : r.bottom + gap) + 'px';
     return above;
@@ -459,7 +464,7 @@
       // The tooltip goes above the pill unless a panel already took
       // that side, then it drops below (arrow flipped to point up).
       this.tip.classList.toggle('tooltip--top', panelAbove);
-      place(this.tip, this.pill, { side: panelAbove ? 'below' : 'above', align: 'center', gap: 8 });
+      place(this.tip, this.pill, { side: panelAbove ? 'below' : 'above', align: 'center', gap: 8, arrow: true });
       if (actionsAbove) { this.tip.style.top = (parseFloat(this.tip.style.top) - this.actions.offsetHeight - 12) + 'px'; }
     }
   };
@@ -995,7 +1000,7 @@
     hintEl.setAttribute('role', 'status');
     hintEl.textContent = message;
     document.body.appendChild(hintEl);
-    place(hintEl, anchor, { side: 'above', align: 'center', gap: 8 });
+    place(hintEl, anchor, { side: 'above', align: 'center', gap: 8, arrow: true });
     hintTimer = window.setTimeout(hideHint, 2600);
   }
 
