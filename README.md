@@ -35,6 +35,15 @@ Every field follows the same rules, so behavior is predictable:
 
 Keyboard support throughout: Enter/Escape to save/cancel, ↑/↓ to move between rows, arrow keys through the calendar and option lists.
 
+## When an edit no longer fits the view
+
+The table is sorted by Name (click Name, Catalog, Quantity or Expire Date to change it) and the search filters by name. If you edit a row so it no longer belongs, say renaming "Brake Fluid" to "Zebra Fluid", it does not jump or disappear:
+
+- The row stays exactly where it is and is tinted, so it never moves under your cursor and keyboard navigation keeps working.
+- A notice says what changed ("“Zebra Fluid” now sorts elsewhere" or "no longer matches the search") and offers **Refresh view**.
+- Refreshing moves the rows into place (kept tinted for a moment so you can follow them) and drops any that no longer match the search. Changing the sort or the search does the same.
+- If a later edit puts the row back where it belongs, the notice goes away on its own.
+
 ## When the server fails
 
 The switch at the top of the page turns the server off. Every save is a request (a short spinner while it's in flight), and with the server off each field fails the same way: nothing is written, the cell turns red and the tooltip says "Couldn’t save. The server isn’t responding."

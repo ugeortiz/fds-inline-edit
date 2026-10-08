@@ -38,6 +38,7 @@
     .showcase__row { margin-bottom: var(--spacing-9); }
     .showcase__label { display: block; font-size: 10px; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-secondary); margin-bottom: var(--spacing-3); }
     .showcase__controls { align-items: center; display: flex; gap: var(--spacing-5); margin-bottom: var(--spacing-6); }
+    .showcase__toast { bottom: var(--spacing-7); left: 50%; max-width: 680px; position: fixed; transform: translateX(-50%); width: calc(100% - 2 * var(--spacing-5)); z-index: 1100; }
     .showcase__scroll { overflow-x: auto; }
     .showcase__scroll .table { min-width: 1360px; }
   </style>
@@ -66,7 +67,7 @@
 <main class="showcase">
   <h1>Products — inline edit (table view)</h1>
   <p class="lead">
-    LPD-9102 — inline editing for the Frontend Data Set, table view. Every field renderer is on the table and they all validate and commit the same way: edit, then ✓ (or Enter) to save and ✕ (or Escape) to cancel. Try an empty name, a bad URL, a quantity of 1000, a past expire date, a date typed by hand, and the locked cells. Switch the server off to see what each field does when a save fails.
+    LPD-9102 — inline editing for the Frontend Data Set, table view. Every field renderer is on the table and they all validate and commit the same way: edit, then ✓ (or Enter) to save and ✕ (or Escape) to cancel. Try an empty name, a bad URL, a quantity of 1000, a past expire date, a date typed by hand, and the locked cells. Switch the server off to see what each field does when a save fails, and edit a name in the sorted list to see what happens to a row that no longer fits the view.
   </p>
 
   <div class="showcase__controls">
@@ -99,7 +100,7 @@
 
         <div class="management-toolbar__search">
           <div class="search">
-            <input class="input__field search__field" type="search" placeholder="Search">
+            <input class="input__field search__field" type="search" placeholder="Search by name" id="js-search">
             <button class="search__submit" aria-label="Search" type="button">
               <svg class="lexicon-icon"><use href="#search"></use></svg>
             </button>
@@ -122,6 +123,21 @@
   </div>
 
 </main>
+
+<div class="showcase__toast" id="js-stale" style="display: none">
+  <div class="alert alert--info alert--toast" role="status">
+    <div class="alert__content">
+      <svg class="lexicon-icon"><use href="#info-circle"></use></svg>
+      <p class="alert__text" id="js-stale-text"></p>
+    </div>
+    <div class="alert__actions">
+      <button type="button" class="btn btn--primary btn--info btn--sm" id="js-refresh">
+        <svg class="lexicon-icon"><use href="#reload"></use></svg>
+        Refresh view
+      </button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -345,21 +361,145 @@
   var thead = document.getElementById('js-thead');
   var tbody = document.getElementById('js-tbody');
 
-  function renderTable() {
+  // ────────────────────────────────────────────────────────────
+  // The view — a sort and a search decide which rows show and in what
+  // order. Editing a row can make it stop fitting that view; it stays
+  // where it is (see noteChange) until the view is refreshed.
+  // ────────────────────────────────────────────────────────────
+  var view = { key: 'name', dir: 1, query: '' };
+  var SORTABLE = { name: true, catalog: true, qty: true, expire: true };
+  var displayed = [];   // PRODUCTS indices, in the order currently shown
+  var pending = {};     // edited rows that no longer fit the view
+  var touched = {};     // every row edited since the view was last computed
+  var settling = {};    // rows just moved by a refresh, briefly highlighted
+
+  function compareValues(a, b) {
+    if (a instanceof Date || typeof a === 'number') { return a - b; }
+    return String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+  }
+
+  function computeOrder() {
+    var q = view.query.trim().toLowerCase();
+    var indices = [];
+    PRODUCTS.forEach(function (row, i) {
+      if (!q || row.name.toLowerCase().indexOf(q) > -1) { indices.push(i); }
+    });
+    indices.sort(function (a, b) {
+      return compareValues(PRODUCTS[a][view.key], PRODUCTS[b][view.key]) * view.dir || a - b;
+    });
+    return indices;
+  }
+
+  function renderHead() {
     var head = '<tr><th class="table__cell--gutter"><label class="checkbox" aria-label="Select all"><input type="checkbox" class="checkbox__input">' + CHECKBOX + '</label></th>';
-    COLUMNS.forEach(function (col) { head += '<th>' + esc(col.label) + '</th>'; });
+    COLUMNS.forEach(function (col) {
+      if (!SORTABLE[col.key]) { head += '<th>' + esc(col.label) + '</th>'; return; }
+      var on = view.key === col.key;
+      head += '<th aria-sort="' + (on ? (view.dir > 0 ? 'ascending' : 'descending') : 'none') + '">' +
+        '<button type="button" class="table__sort' + (on ? ' table__sort--active' : '') + ' js-sort" data-key="' + col.key + '">' + esc(col.label) +
+        '<svg class="lexicon-icon"><use href="#' + (on ? (view.dir > 0 ? 'order-arrow-up' : 'order-arrow-down') : 'order-arrow') + '"></use></svg></button></th>';
+    });
     head += '<th class="table__cell--gutter"></th></tr>';
     thead.innerHTML = head;
+  }
 
+  function renderBody() {
     var body = '';
-    PRODUCTS.forEach(function (row, r) {
-      body += '<tr><td class="table__cell--gutter"><label class="checkbox" aria-label="Select row"><input type="checkbox" class="checkbox__input">' + CHECKBOX + '</label></td>';
+    if (!displayed.length) {
+      body = '<tr><td colspan="' + (COLUMNS.length + 2) + '">No products match “' + esc(view.query) + '”.</td></tr>';
+    }
+    displayed.forEach(function (r) {
+      var row = PRODUCTS[r];
+      body += '<tr data-row="' + r + '"' + (pending[r] || settling[r] ? ' class="is-pending"' : '') + '><td class="table__cell--gutter"><label class="checkbox" aria-label="Select row"><input type="checkbox" class="checkbox__input">' + CHECKBOX + '</label></td>';
       COLUMNS.forEach(function (col, c) {
         body += '<td data-row="' + r + '" data-col="' + c + '">' + cellHtml(col, row) + '</td>';
       });
       body += '<td class="table__cell--gutter"><button class="btn btn--borderless btn--sm btn--icon" aria-label="More"><svg class="lexicon-icon"><use href="#ellipsis-v"></use></svg></button></td></tr>';
     });
     tbody.innerHTML = body;
+  }
+
+  var staleBar = document.getElementById('js-stale');
+  var staleText = document.getElementById('js-stale-text');
+
+  function hideStale() { staleBar.style.display = 'none'; }
+
+  function showStale(fresh) {
+    var keys = Object.keys(pending);
+    var gone = keys.filter(function (k) { return fresh.indexOf(+k) < 0; }).length;
+    var n = keys.length;
+    var subject = n === 1 ? '“' + esc(PRODUCTS[+keys[0]].name) + '”' : n + ' edited items';
+    var reason;
+    if (gone && gone === n) { reason = n === 1 ? 'no longer matches the search' : 'no longer match the search'; }
+    else if (gone) { reason = 'no longer fit the current sort or search'; }
+    else { reason = n === 1 ? 'now sorts elsewhere' : 'now sort elsewhere'; }
+    staleText.innerHTML = '<strong>The view is out of date.</strong> ' + subject + ' ' + reason + '. ' +
+      (n === 1 ? 'It stays' : 'They stay') + ' in place until you refresh.';
+    staleBar.style.display = '';
+  }
+
+  // A row is out of place when the view would now drop it (search) or
+  // when it no longer sorts between its neighbours.
+  function isMisplaced(r, fresh) {
+    if (fresh.indexOf(r) < 0) { return true; }
+    var at = displayed.indexOf(r);
+    var value = PRODUCTS[r][view.key];
+    var before = displayed[at - 1];
+    var after = displayed[at + 1];
+    if (before !== undefined && compareValues(PRODUCTS[before][view.key], value) * view.dir > 0) { return true; }
+    return after !== undefined && compareValues(value, PRODUCTS[after][view.key]) * view.dir > 0;
+  }
+
+  // After a successful save: if the fresh sort/search would now show an
+  // edited row differently, keep everything where it is, tint that row
+  // and offer a refresh. Rows never move or vanish on their own — that
+  // would pull the row out from under the cursor and break keyboard
+  // navigation.
+  function noteChange(r) {
+    touched[r] = true;
+    var fresh = computeOrder();
+    pending = {};
+    Object.keys(touched).forEach(function (k) {
+      if (isMisplaced(+k, fresh)) { pending[k] = true; }
+      var tr = tbody.querySelector('tr[data-row="' + k + '"]');
+      if (tr) { tr.classList.toggle('is-pending', !!pending[k]); }
+    });
+    if (Object.keys(pending).length) { showStale(fresh); } else { hideStale(); }
+  }
+
+  // Changing the sort or the search re-evaluates the whole view.
+  function applyView() {
+    if (active) { active.forceClose(); }
+    pending = {};
+    touched = {};
+    settling = {};
+    hideStale();
+    displayed = computeOrder();
+    renderBody();
+  }
+
+  // The explicit refresh: rows settle into their new places, edited
+  // rows stay tinted for a moment so the eye can follow them.
+  function refreshView() {
+    if (active) { active.forceClose(); }
+    var moved = Object.keys(pending);
+    settling = {};
+    moved.forEach(function (k) { settling[k] = true; });
+    pending = {};
+    touched = {};
+    hideStale();
+    displayed = computeOrder();
+    renderBody();
+    var first = moved.filter(function (k) { return displayed.indexOf(+k) > -1; })[0];
+    var firstRow = first && tbody.querySelector('tr[data-row="' + first + '"]');
+    if (firstRow && firstRow.scrollIntoView) { firstRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    window.setTimeout(function () {
+      moved.forEach(function (k) {
+        delete settling[k];
+        var tr = tbody.querySelector('tr[data-row="' + k + '"]');
+        if (tr && !pending[k]) { tr.classList.remove('is-pending'); }
+      });
+    }, 1800);
   }
 
   function renderCell(td) {
@@ -503,6 +643,7 @@
 
     request(function () {
       self.row[self.col.key] = value;
+      noteChange(+self.td.getAttribute('data-row'));
       self.pill.classList.remove('editable-cell--saving');
       self.pill.classList.add('editable-cell--success');
       if (self.actions) { self.actions.remove(); }
@@ -963,6 +1104,7 @@
 
     request(function () {
       row[col.key] = wanted;
+      noteChange(+td.getAttribute('data-row'));
       wrap.classList.remove('editable-cell--saving');
       wrap.classList.add('editable-cell--success');
       window.setTimeout(function () {
@@ -1044,7 +1186,24 @@
     if (targetTrigger) { e.preventDefault(); targetTrigger.focus(); }
   });
 
-  renderTable();
+  document.getElementById('js-refresh').addEventListener('click', refreshView);
+  document.getElementById('js-search').addEventListener('input', function (e) {
+    view.query = e.target.value;
+    applyView();
+  });
+  thead.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-sort');
+    if (!btn) { return; }
+    var key = btn.getAttribute('data-key');
+    view.dir = view.key === key ? -view.dir : 1;
+    view.key = key;
+    applyView();
+    renderHead();
+  });
+
+  displayed = computeOrder();
+  renderHead();
+  renderBody();
 })();
 </script>
 

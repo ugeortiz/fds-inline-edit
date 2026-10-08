@@ -4892,3 +4892,33 @@
   padding-top: var(--spacing-4);
 }
 .date-picker-panel__time + .editable-cell__panel-actions { border-top: 0; padding-top: 0; }
+
+
+/* ============================================================
+   TABLE — SORT HEADER + PENDING ROW (FDS inline edit)
+   .table__sort is a header cell's sort button: label + order arrow,
+   styled like the plain header text until hovered or active.
+   tr.is-pending marks a row that was edited and no longer fits the
+   current sort or search: it stays where it was (rows never jump
+   under the user's cursor) until the view is refreshed.
+   ============================================================ */
+
+.table__sort {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: var(--spacing-2);
+  letter-spacing: inherit;
+  padding: 0;
+  text-transform: inherit;
+}
+.table__sort:hover,
+.table__sort--active { color: var(--color-dark); }
+.table__sort:focus-visible { border-radius: var(--rounded-sm); box-shadow: var(--focus-ring); outline: none; }
+
+.table tbody tr.is-pending,
+.table tbody tr.is-pending:nth-child(even) { background: var(--color-info-l2); }
