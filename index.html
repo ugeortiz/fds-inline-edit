@@ -72,7 +72,7 @@
 
   <div class="showcase__controls">
     <label class="toggle toggle--sm">
-      <input type="checkbox" class="toggle__input" id="js-server" checked>
+      <input type="checkbox" role="switch" class="toggle__input" id="js-server" checked>
       <span class="toggle__track"><span class="toggle__dot"><svg class="lexicon-icon"><use href="#check"></use></svg></span></span>
       <span class="toggle__label">Server online</span>
     </label>
@@ -136,6 +136,9 @@
         Refresh view
       </button>
     </div>
+    <button type="button" class="btn btn--borderless btn--sm btn--icon alert__close" id="js-stale-close" aria-label="Dismiss">
+      <svg class="lexicon-icon"><use href="#times"></use></svg>
+    </button>
   </div>
 </div>
 
@@ -239,10 +242,10 @@
     return (out.getFullYear() === y && out.getMonth() === mo && out.getDate() === d) ? out : null;
   }
 
-  // 6 full Monday-first weeks (42 cells) so every month's panel has
+  // 6 full Sunday-first weeks (42 cells) so every month's panel has
   // the same height.
   function buildMonthCells(year, month) {
-    var leading = (new Date(year, month, 1).getDay() + 6) % 7;
+    var leading = new Date(year, month, 1).getDay();
     var cells = [];
     for (var i = 0; i < 42; i++) { cells.push(new Date(year, month, 1 - leading + i)); }
     return cells;
@@ -337,7 +340,7 @@
     if (type.kind === 'toggle') {
       return '<div class="editable-cell editable-cell--toggle editable-cell--w-hug' + (locked ? ' editable-cell--readonly' : '') + '">' +
         '<label class="toggle toggle--sm">' +
-          '<input type="checkbox" class="toggle__input js-cell-trigger js-toggle" aria-label="' + esc(col.label) + '"' + (value ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
+          '<input type="checkbox" role="switch" class="toggle__input js-cell-trigger js-toggle" aria-label="' + esc(col.label) + '"' + (value ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
           '<span class="toggle__track"><span class="toggle__dot"><svg class="lexicon-icon"><use href="#check"></use></svg></span></span>' +
         '</label>' +
         STATUS_ICONS +
@@ -880,8 +883,8 @@
         '<div class="date-picker-panel js-panel" role="dialog" aria-label="Choose ' + esc(col.label) + '">' +
           '<div class="date-picker-panel__header">' +
             '<div class="date-picker-panel__nav">' +
-              '<span class="js-date-month-label"><span class="js-date-month-text"></span> <svg class="lexicon-icon"><use href="#caret-double-l"></use></svg></span>' +
-              '<span class="js-date-year-label"><span class="js-date-year-text"></span> <svg class="lexicon-icon"><use href="#caret-double-l"></use></svg></span>' +
+              '<button type="button" class="js-date-month-label" aria-haspopup="listbox" aria-label="Select a month"><span class="js-date-month-text"></span> <svg class="lexicon-icon"><use href="#caret-double-l"></use></svg></button>' +
+              '<button type="button" class="js-date-year-label" aria-haspopup="listbox" aria-label="Select a year"><span class="js-date-year-text"></span> <svg class="lexicon-icon"><use href="#caret-double-l"></use></svg></button>' +
             '</div>' +
             '<div class="date-picker-panel__actions">' +
               '<button type="button" class="btn btn--borderless btn--sm btn--icon js-date-prev" aria-label="Previous month"><svg class="lexicon-icon"><use href="#angle-left"></use></svg></button>' +
@@ -889,7 +892,7 @@
               '<button type="button" class="btn btn--borderless btn--sm btn--icon js-date-next" aria-label="Next month"><svg class="lexicon-icon"><use href="#angle-right"></use></svg></button>' +
             '</div>' +
           '</div>' +
-          '<div class="date-picker-panel__weekdays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>' +
+          '<div class="date-picker-panel__weekdays"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>' +
           '<div class="date-picker-panel__grid js-date-grid" role="grid"></div>' +
           '<div class="editable-cell__panel-actions">' +
             '<button type="button" class="btn btn--primary btn--sm btn--icon js-save" aria-label="Save"><svg class="lexicon-icon"><use href="#check"></use></svg></button>' +
@@ -957,6 +960,65 @@
       renderGrid(true);
     }
 
+    // Month and year are real pickers, like Clay's: each label opens a
+    // short list inside the panel.
+    var listMenu = null;
+    function closeListMenu() {
+      if (listMenu) { listMenu.remove(); listMenu = null; }
+    }
+    function openListMenu(anchor, items, current, onPick) {
+      closeListMenu();
+      var ul = document.createElement('ul');
+      ul.className = 'dropdown editable-cell__calendar-menu';
+      ul.setAttribute('role', 'listbox');
+      items.forEach(function (item) {
+        var li = document.createElement('li');
+        var btn = document.createElement('button');
+        var isCurrent = item.value === current;
+        btn.type = 'button';
+        btn.setAttribute('role', 'option');
+        btn.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+        btn.className = 'dropdown__item' + (isCurrent ? ' is-active' : '');
+        btn.innerHTML = '<span class="dropdown__item-text">' + esc(item.label) + '</span>';
+        btn.addEventListener('click', function () { closeListMenu(); onPick(item.value); });
+        li.appendChild(btn);
+        ul.appendChild(li);
+      });
+      ul.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') { return; }
+        e.preventDefault();
+        var options = Array.prototype.slice.call(ul.querySelectorAll('.dropdown__item'));
+        var next = options.indexOf(document.activeElement) + (e.key === 'ArrowDown' ? 1 : -1);
+        options[Math.max(0, Math.min(options.length - 1, next))].focus();
+      });
+      panel.appendChild(ul);
+      var panelRect = panel.getBoundingClientRect();
+      var anchorRect = anchor.getBoundingClientRect();
+      ul.style.left = (anchorRect.left - panelRect.left) + 'px';
+      ul.style.top = (anchorRect.bottom - panelRect.top + 4) + 'px';
+      var current_ = ul.querySelector('.is-active');
+      if (current_) { ul.scrollTop = current_.offsetTop - ul.clientHeight / 2 + current_.offsetHeight / 2; }
+      (current_ || ul.querySelector('.dropdown__item')).focus();
+      listMenu = ul;
+    }
+
+    var monthLabel = holder.querySelector('.js-date-month-label');
+    var yearLabel = holder.querySelector('.js-date-year-label');
+    s.on(monthLabel, 'click', function () {
+      openListMenu(monthLabel, MONTHS.map(function (name, i) { return { label: name, value: i }; }), viewMonth, function (month) {
+        goToMonth(viewYear, month);
+      });
+    });
+    s.on(yearLabel, 'click', function () {
+      var years = [];
+      for (var y = new Date().getFullYear() - 10; y <= new Date().getFullYear() + 30; y++) { years.push({ label: String(y), value: y }); }
+      if (!years.some(function (item) { return item.value === viewYear; })) { years.push({ label: String(viewYear), value: viewYear }); years.sort(function (a, b) { return a.value - b.value; }); }
+      openListMenu(yearLabel, years, viewYear, function (year) { goToMonth(year, viewMonth); });
+    });
+    s.on(panel, 'mousedown', function (e) {
+      if (listMenu && !listMenu.contains(e.target) && !monthLabel.contains(e.target) && !yearLabel.contains(e.target)) { closeListMenu(); }
+    });
+
     function shiftFocus(days) {
       focused = new Date(focused.getFullYear(), focused.getMonth(), focused.getDate() + days);
       viewYear = focused.getFullYear();
@@ -986,6 +1048,7 @@
 
     s.on(holder, 'keydown', function (e) {
       if (s.busy) { return; }
+      if (e.key === 'Escape' && listMenu) { e.preventDefault(); closeListMenu(); return; }
       if (e.key === 'Escape') { e.preventDefault(); s.cancel(); }
       else if (e.key === 'Enter' && e.target === input) { e.preventDefault(); save(); }
       else if (e.key === 'ArrowDown' && e.target === input) { e.preventDefault(); renderGrid(true); }
@@ -1192,6 +1255,8 @@
   });
 
   document.getElementById('js-refresh').addEventListener('click', refreshView);
+  // Dismissing only hides the notice; the tinted rows stay until a refresh.
+  document.getElementById('js-stale-close').addEventListener('click', hideStale);
   document.getElementById('js-search').addEventListener('input', function (e) {
     view.query = e.target.value;
     applyView();

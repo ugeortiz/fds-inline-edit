@@ -4844,6 +4844,19 @@
 .editable-cell-select .date-picker-panel,
 .editable-cell__panel { position: fixed; z-index: 1000; }
 
+button.js-date-month-label,
+button.js-date-year-label {
+  background: none;
+  border: 0;
+  border-radius: var(--rounded-sm);
+  cursor: pointer;
+  padding: var(--spacing-1) var(--spacing-2);
+}
+button.js-date-month-label:hover,
+button.js-date-year-label:hover { background: var(--color-light-l1); }
+button.js-date-month-label:focus-visible,
+button.js-date-year-label:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+
 .js-date-month-label,
 .js-date-year-label {
   align-items: center;
@@ -4906,6 +4919,8 @@
 
 .table__sort {
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
   background: none;
   border: 0;
   color: inherit;
@@ -4923,3 +4938,14 @@
 
 .table tbody tr.is-pending,
 .table tbody tr.is-pending:nth-child(even) { background: var(--color-info-l2); }
+
+/* Month / year list inside the calendar panel (opens under its label). */
+.editable-cell__calendar-menu {
+  margin: 0;
+  max-height: 208px;
+  min-width: 0;
+  overflow-y: auto;
+  position: absolute;
+  width: 152px;
+  z-index: 2;
+}

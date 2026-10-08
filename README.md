@@ -18,7 +18,7 @@ One live "Products" table with the FDS field renderers, all of them actually int
 | Link | Link | Inline input, must be a valid URL |
 | Quantity | Quantity selector | Inline input with the Clay stacked ▲▼ spinner (or ↑/↓ keys), whole number 0–999 |
 | Published | Boolean | Toggle |
-| Expire Date | Date | Calendar, or type the date; can't be in the past |
+| Expire Date | Date | Calendar (Sunday-first, with month and year pickers like Clay), or type the date; can't be in the past |
 | Details | Action link | Not editable inline, shows what it does |
 
 Some cells are locked to show the read-only state: a lock appears on hover and clicking explains why.
